@@ -9,6 +9,7 @@ import { JoinHomeInvitePopup } from "./JoinHomeInvitePopup";
 import { PullToRefresh } from "./PullToRefresh";
 
 import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { useDB, accountBalance, initDB, refreshDB, useUndo, undo, redo } from "@/lib/store";
 import { money } from "@/lib/format";
 import { uiActions } from "@/lib/ui-store";
@@ -101,6 +102,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     hydrateUsers();
     initDB();
   }, []);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    const notice = sessionStorage.getItem("smartbudget.sync.notice");
+    if (!notice) return;
+    sessionStorage.removeItem("smartbudget.sync.notice");
+    toast.success(notice);
+  }, [unlocked]);
 
   useEffect(() => {
     const interval = setInterval(() => refreshDB(), 5000);

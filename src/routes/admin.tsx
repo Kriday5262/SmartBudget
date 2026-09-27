@@ -33,7 +33,13 @@ import {
   addHomeMember,
   netWorth,
 } from "@/lib/store";
-import { getRegisteredUsers, getActiveUser, lock, saveUsers, type UserAccount } from "@/lib/lock";
+import {
+  getRegisteredUsers,
+  getActiveUser,
+  logoutKeepData,
+  saveUsers,
+  type UserAccount,
+} from "@/lib/lock";
 import { updateUserApi } from "@/lib/api";
 import { money } from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -125,10 +131,10 @@ export function AdminPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => lock()}
+              onClick={() => void logoutKeepData()}
               className="rounded-full border-border text-xs font-bold text-destructive hover:bg-destructive/10"
             >
-              <Lock className="mr-1.5 h-3.5 w-3.5" /> Lock App
+              <Lock className="mr-1.5 h-3.5 w-3.5" /> Log out
             </Button>
           </div>
         </div>
@@ -461,12 +467,11 @@ export function AdminPage() {
               <Button
                 variant="destructive"
                 onClick={() => {
-                  lock();
-                  toast.success("All sessions locked!");
+                  void logoutKeepData();
                 }}
                 className="rounded-2xl font-bold text-xs h-10 shadow-xs"
               >
-                Lock All Sessions
+                Log out
               </Button>
             </div>
           </div>

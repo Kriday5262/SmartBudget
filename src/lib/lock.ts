@@ -159,6 +159,10 @@ export async function joinUserToHome(
   return { ok: true, homeId: res.homeId, name: res.name };
 }
 
+export function isSessionUnlocked() {
+  return unlocked;
+}
+
 export function hydrateLock() {
   if (typeof window === "undefined") return;
   const remembered = isRemembered();
@@ -171,7 +175,7 @@ export async function unlock(
   password: string,
   username = "shantanu",
   remember = false,
-): Promise<{ ok: boolean; needsReset?: boolean }> {
+): Promise<{ ok: boolean; needsReset?: boolean; sync?: string | null }> {
   const { verifyUserApi } = await import("./api");
   const res = await verifyUserApi({ data: { username, password } });
   if (!res.ok || !res.user) return { ok: false };
@@ -193,15 +197,21 @@ export async function unlock(
   const active = getActiveUser();
   setActiveHomeId(active?.homeId ?? "home-default");
 
+  let sync: string | null = null;
+  try {
+    const { initDB } = await import("./store");
+    const { describeSync } = await import("./local-budget");
+    sync = describeSync(await initDB(true));
+  } catch {
+    sync = null;
+  }
+
   unlocked = true;
   sessionStorage.setItem(SESSION_KEY, "1");
   if (remember) setRememberCookie(true, true);
+  if (sync) sessionStorage.setItem("smartbudget.sync.notice", sync);
   emit();
-  try {
-    const { initDB } = await import("./store");
-    await initDB(true);
-  } catch {}
-  return { ok: true };
+  return { ok: true, sync };
 }
 
 export async function registerUser(
@@ -227,17 +237,45 @@ export async function registerUser(
   const active = getActiveUser();
   setActiveHomeId(active?.homeId ?? "home-default");
 
+  let sync: string | null = null;
+  try {
+    const { initDB } = await import("./store");
+    const { describeSync } = await import("./local-budget");
+    sync = describeSync(await initDB(true));
+  } catch {
+    sync = null;
+  }
+
   unlocked = true;
   sessionStorage.setItem(SESSION_KEY, "1");
   if (remember) setRememberCookie(true, true);
+  if (sync) sessionStorage.setItem("smartbudget.sync.notice", sync);
   emit();
-
-  try {
-    const { initDB } = await import("./store");
-    await initDB(true);
-  } catch {}
-
   return { ok: true };
+}
+
+/** Sign out and keep an encrypted copy of the budget on this device. */
+export async function logoutKeepData() {
+  try {
+    const { flushSave } = await import("./store");
+    await flushSave();
+  } catch {
+    /* The encrypted device copy from the last edit is still available. */
+  }
+  if (typeof window !== "undefined") sessionStorage.setItem("smartbudget.logout.notice", "kept");
+  lock();
+}
+
+/** Sign out and erase the on-device vault plus the synced homes for this user. */
+export async function logoutAndDeleteData() {
+  try {
+    const { wipeAllUserData } = await import("./store");
+    await wipeAllUserData();
+  } catch {
+    /* Still sign out so a failed wipe cannot leave the session open. */
+  }
+  if (typeof window !== "undefined") sessionStorage.setItem("smartbudget.logout.notice", "deleted");
+  lock();
 }
 
 export function lock() {

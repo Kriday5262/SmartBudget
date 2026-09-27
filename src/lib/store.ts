@@ -1,7 +1,22 @@
 import { useSyncExternalStore } from "react";
 import { saveDB } from "./api";
-import { getCurrentHomeId, setActiveHomeId, joinUserToHome, getActiveUser, saveUsers, getRegisteredUsers } from "./lock";
+import {
+  getCurrentHomeId,
+  setActiveHomeId,
+  joinUserToHome,
+  getActiveUser,
+  saveUsers,
+  getRegisteredUsers,
+  isSessionUnlocked,
+} from "./lock";
 import { monthKey, todayISO } from "./format";
+import {
+  clearLocalBudgetsForUser,
+  loadLocalBudget,
+  mergeBudgets,
+  saveLocalBudget,
+  type SyncStats,
+} from "./local-budget";
 
 /** The four account families the app understands. */
 export type AccountType = "account" | "credit" | "fd" | "rd";
@@ -221,8 +236,9 @@ const listeners = new Set<() => void>();
 let dbInitialized = false;
 
 /**
- * Financial data is kept in memory only — never persisted to localStorage in
- * plaintext. Old plaintext fast-cache keys from earlier builds are purged.
+ * The live budget stays in memory and is synced to the server. A second copy
+ * is kept in an encrypted local vault so logout can preserve it on this device.
+ * Old plaintext fast-cache keys from earlier builds are purged.
  */
 if (typeof window !== "undefined") {
   try {
@@ -262,28 +278,97 @@ function parseDBValue(json: string | object): DB | null {
   return null;
 }
 
-export async function initDB(force = false): Promise<void> {
-  if (dbInitialized && !force) return;
-  const homeId = getCurrentHomeId();
+async function rememberLocal(snapshot: DB, homeId: string) {
+  const user = getActiveUser();
+  if (!user) return;
+  await saveLocalBudget(user.username, homeId, snapshot);
+}
+
+/**
+ * Pull the server budget and, when this device has a saved copy, merge them.
+ * Records that already exist are skipped. Records that exist on only one side are kept.
+ */
+async function loadMergedHome(homeId: string, syncLocal: boolean): Promise<SyncStats | null> {
+  const { fetchDB, saveDB } = await import("./api");
+  const user = getActiveUser();
+  let remote: DB | null = null;
+  let fetched = false;
   try {
-    const { fetchDB, saveDB } = await import("./api");
     const json = await fetchDB({ data: { homeId } });
-    const parsed = parseDBValue(json as any);
-    if (parsed && Array.isArray(parsed.accounts)) {
-      db = parsed;
-      _loadedHomeId = homeId;
-    } else {
-      if (!db || !db.accounts || db.accounts.length === 0) {
-        db = seed();
+    remote = parseDBValue(json as any);
+    fetched = true;
+  } catch {
+    fetched = false;
+  }
+
+  if (!fetched) {
+    if (syncLocal && user) {
+      const local = await loadLocalBudget(user.username, homeId);
+      if (local) {
+        db = local;
         _loadedHomeId = homeId;
-        await saveDB({ data: { json: db, homeId } });
+        return { hadLocal: true, duplicates: 0, uploaded: 0, downloaded: 0, updated: 0 };
       }
     }
+    if (!db) db = seed();
+    return null;
+  }
+
+  if (syncLocal && user) {
+    const local = await loadLocalBudget(user.username, homeId);
+    if (local) {
+      const base = remote ?? seed();
+      const { db: merged, stats } = mergeBudgets(local, base);
+      db = merged;
+      _loadedHomeId = homeId;
+      if (!remote || stats.uploaded > 0 || stats.updated > 0) {
+        pendingSave = true;
+        try {
+          await saveDB({ data: { json: merged, homeId } });
+        } finally {
+          pendingSave = false;
+        }
+      }
+      await saveLocalBudget(user.username, homeId, merged);
+      return stats;
+    }
+    if (remote) {
+      db = remote;
+      _loadedHomeId = homeId;
+      await saveLocalBudget(user.username, homeId, remote);
+      return { hadLocal: false, duplicates: 0, uploaded: 0, downloaded: 0, updated: 0 };
+    }
+  }
+
+  if (remote) {
+    db = remote;
+    _loadedHomeId = homeId;
+    if (syncLocal) await rememberLocal(remote, homeId);
+    return null;
+  }
+
+  if (!db || !db.accounts) {
+    db = seed();
+    _loadedHomeId = homeId;
+    await saveDB({ data: { json: db, homeId } });
+    if (syncLocal) await rememberLocal(db, homeId);
+  }
+  return null;
+}
+
+export async function initDB(force = false): Promise<SyncStats | null> {
+  if (dbInitialized && !force) return null;
+  const homeId = getCurrentHomeId();
+  const syncLocal = force || isSessionUnlocked();
+  let stats: SyncStats | null = null;
+  try {
+    stats = await loadMergedHome(homeId, syncLocal);
   } catch {
     if (!db) db = seed();
   }
   dbInitialized = true;
   listeners.forEach((l) => l());
+  return stats;
 }
 
 let pendingSave = false;
@@ -337,6 +422,7 @@ function persist() {
   const homeId = _loadedHomeId ?? getCurrentHomeId();
   const snapshot: DB = JSON.parse(JSON.stringify(db));
   pendingSave = true;
+  void rememberLocal(snapshot, homeId);
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveDB({ data: { json: snapshot, homeId } })
@@ -347,6 +433,52 @@ function persist() {
         pendingSave = false;
       });
   }, 300);
+}
+
+/** Write the in-memory budget to the server and the on-device vault immediately. */
+export async function flushSave(): Promise<void> {
+  if (typeof window === "undefined" || !db) return;
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  const homeId = _loadedHomeId ?? getCurrentHomeId();
+  const snapshot: DB = JSON.parse(JSON.stringify(db));
+  pendingSave = true;
+  try {
+    await saveDB({ data: { json: snapshot, homeId } });
+  } finally {
+    pendingSave = false;
+  }
+  await rememberLocal(snapshot, homeId);
+}
+
+/** Erase this user's on-device vault and replace each of their homes with an empty budget. */
+export async function wipeAllUserData(): Promise<void> {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  pendingSave = true;
+  const user = getActiveUser();
+  if (user) await clearLocalBudgetsForUser(user.username);
+  const homes = new Set<string>();
+  const current = _loadedHomeId ?? getCurrentHomeId();
+  if (current) homes.add(current);
+  if (user?.homeId) homes.add(user.homeId);
+  for (const id of user?.homes ?? []) homes.add(id);
+  const empty = seed();
+  db = empty;
+  _loadedHomeId = current;
+  undoStack = [];
+  redoStack = [];
+  try {
+    const { saveDB: saveNow } = await import("./api");
+    await Promise.all([...homes].map((homeId) => saveNow({ data: { json: empty, homeId } })));
+  } finally {
+    pendingSave = false;
+  }
+  listeners.forEach((l) => l());
 }
 
 export function getDB(): DB {
@@ -1357,16 +1489,10 @@ export async function createHousehold(name: string): Promise<string | null> {
 
 async function reloadHome(homeId: string) {
   try {
-    const { fetchDB } = await import("./api");
-    const json = await fetchDB({ data: { homeId } });
-    const parsed = parseDBValue(json as any);
-    if (parsed && Array.isArray(parsed.accounts)) {
-      db = parsed;
-      _loadedHomeId = homeId;
-      undoStack = [];
-      redoStack = [];
-      listeners.forEach((l) => l());
-    }
+    await loadMergedHome(homeId, isSessionUnlocked());
+    undoStack = [];
+    redoStack = [];
+    listeners.forEach((l) => l());
   } catch {}
 }
 

@@ -11,7 +11,6 @@ import {
   Keyboard,
   Plus,
   Trash2,
-  Lock as LockIcon,
   Share2,
   Copy,
   Users,
@@ -29,6 +28,7 @@ import {
   Sparkles,
   ShieldAlert,
   Info,
+  LogOut,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,7 +65,8 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import {
   changePassword,
-  lock,
+  logoutKeepData,
+  logoutAndDeleteData,
   getActiveUser,
   isRemembered,
   setRememberCookie,
@@ -214,6 +215,9 @@ export function SettingsPage() {
 
   const [payee, setPayee] = useState({ name: "", vpa: "" });
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(false);
+  const [wipePhrase, setWipePhrase] = useState("");
+  const [wiping, setWiping] = useState(false);
   const [newHomeName, setNewHomeName] = useState("");
   const [memberName, setMemberName] = useState("");
 
@@ -306,10 +310,10 @@ export function SettingsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => lock()}
+            onClick={() => void logoutKeepData()}
             className="rounded-full border-border text-xs font-bold shadow-xs"
           >
-            <LockIcon className="mr-1.5 h-3.5 w-3.5 text-primary" /> Lock
+            <LogOut className="mr-1.5 h-3.5 w-3.5 text-primary" /> Log out
           </Button>
         )}
       </div>
@@ -562,6 +566,23 @@ export function SettingsPage() {
               title="Remember Device Cookie"
               subtitle="Keep session logged in infinitely on this browser"
               trailing={<IOSToggle checked={cookieRemembered} onChange={handleCookieToggle} />}
+            />
+            <IOSRow
+              icon={LogOut}
+              iconBg="bg-slate-600"
+              title="Log out"
+              subtitle="Your budget stays on this device. Signing back in skips duplicates and syncs the rest."
+              onClick={() => void logoutKeepData()}
+            />
+            <IOSRow
+              icon={Trash2}
+              iconBg="bg-destructive"
+              title="Log out & delete data"
+              subtitle="Erase this device and your synced homes. You must type DELETE."
+              onClick={() => {
+                setWipePhrase("");
+                setConfirmWipe(true);
+              }}
               isLast
             />
           </IOSGroup>
@@ -820,6 +841,27 @@ export function SettingsPage() {
             />
           </IOSGroup>
 
+          <IOSGroup title="Sign out">
+            <IOSRow
+              icon={LogOut}
+              iconBg="bg-slate-600"
+              title="Log out, keep data on this device"
+              subtitle="Next sign-in checks for duplicates, then syncs anything new"
+              onClick={() => void logoutKeepData()}
+            />
+            <IOSRow
+              icon={Trash2}
+              iconBg="bg-destructive"
+              title="Log out & delete data"
+              subtitle="Asks you to type DELETE before anything is removed"
+              onClick={() => {
+                setWipePhrase("");
+                setConfirmWipe(true);
+              }}
+              isLast
+            />
+          </IOSGroup>
+
           <IOSGroup title="Emergency Reset">
             <div className="p-4">
               <Button
@@ -878,6 +920,48 @@ export function SettingsPage() {
             >
               Reset Data
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirmWipe}
+        onOpenChange={(open) => {
+          setConfirmWipe(open);
+          if (!open) setWipePhrase("");
+        }}
+      >
+        <AlertDialogContent className="rounded-[24px] border-border bg-card p-6 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold text-destructive">
+              Log out and delete data?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              This signs you out and permanently deletes the budget saved on this device and in your
+              synced homes. Type DELETE to confirm.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            autoFocus
+            value={wipePhrase}
+            placeholder="Type DELETE"
+            onChange={(e) => setWipePhrase(e.target.value)}
+            className="h-11 rounded-2xl font-bold tracking-wide"
+          />
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="h-11 rounded-2xl font-bold">Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={wipePhrase !== "DELETE" || wiping}
+              className="h-11 rounded-2xl font-bold"
+              onClick={() => {
+                if (wipePhrase !== "DELETE") return;
+                setWiping(true);
+                void logoutAndDeleteData();
+              }}
+            >
+              {wiping ? "Deleting…" : "Delete and log out"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

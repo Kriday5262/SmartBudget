@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Lock, UserPlus, LogIn } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { unlock, changePassword, registerUser } from "@/lib/lock";
+import { unlock, changePassword, registerUser, getActiveUser } from "@/lib/lock";
 
 type AuthMode = "login" | "register" | "reset";
 
@@ -17,6 +17,20 @@ export function LockScreen() {
   const [resetUser, setResetUser] = useState<{ username: string; current: string } | null>(null);
 
   const [remember, setRemember] = useState(true);
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    const active = getActiveUser();
+    if (active) setUsername((current) => current || active.username);
+    const flag = sessionStorage.getItem("smartbudget.logout.notice");
+    if (!flag) return;
+    sessionStorage.removeItem("smartbudget.logout.notice");
+    setNotice(
+      flag === "deleted"
+        ? "Signed out. Budget data on this device and in your synced homes was deleted."
+        : "Signed out. Your budget is saved on this device and will sync when you sign back in.",
+    );
+  }, []);
 
   async function completeUnlock(
     user: { username: string; current: string },
@@ -92,7 +106,9 @@ export function LockScreen() {
           </span>
           <div>
             <h1 className="text-xl font-bold">SmartBudget</h1>
-            <p className="text-xs text-muted-foreground">Authentication required every session</p>
+            <p className="text-xs text-muted-foreground">
+              {notice || "Sign in to sync this device with your account"}
+            </p>
           </div>
         </div>
 
@@ -285,7 +301,8 @@ export function LockScreen() {
         {error && <p className="text-center text-xs font-semibold text-destructive">{error}</p>}
 
         <p className="flex items-center justify-center gap-1.5 pt-2 text-[11px] text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> Authentication required on every visit
+          <Lock className="h-3.5 w-3.5" /> Logging out keeps a copy on this device unless you delete
+          it
         </p>
       </div>
     </main>

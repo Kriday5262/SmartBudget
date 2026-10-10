@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BudgetRouteImport } from './routes/budget'
+import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as PayRouteImport } from './routes/pay'
 import { Route as ReconciliationRouteImport } from './routes/reconciliation'
@@ -38,6 +40,11 @@ const BudgetRoute = BudgetRouteImport.update({
   path: '/budget',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GoalsRoute = GoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
@@ -46,6 +53,11 @@ const GoalsRoute = GoalsRouteImport.update({
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoansRoute = LoansRouteImport.update({
@@ -93,8 +105,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
+  '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
   '/reconciliation': typeof ReconciliationRoute
@@ -108,8 +122,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
+  '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
   '/reconciliation': typeof ReconciliationRoute
@@ -124,8 +140,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
+  '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
   '/reconciliation': typeof ReconciliationRoute
@@ -141,8 +159,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/budget'
+    | '/features'
     | '/goals'
     | '/history'
+    | '/home'
     | '/loans'
     | '/pay'
     | '/reconciliation'
@@ -156,8 +176,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/budget'
+    | '/features'
     | '/goals'
     | '/history'
+    | '/home'
     | '/loans'
     | '/pay'
     | '/reconciliation'
@@ -171,8 +193,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/budget'
+    | '/features'
     | '/goals'
     | '/history'
+    | '/home'
     | '/loans'
     | '/pay'
     | '/reconciliation'
@@ -187,8 +211,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   BudgetRoute: typeof BudgetRoute
+  FeaturesRoute: typeof FeaturesRoute
   GoalsRoute: typeof GoalsRoute
   HistoryRoute: typeof HistoryRoute
+  HomeRoute: typeof HomeRoute
   LoansRoute: typeof LoansRoute
   PayRoute: typeof PayRoute
   ReconciliationRoute: typeof ReconciliationRoute
@@ -222,6 +248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BudgetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/goals': {
       id: '/goals'
       path: '/goals'
@@ -234,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loans': {
@@ -299,8 +339,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   BudgetRoute: BudgetRoute,
+  FeaturesRoute: FeaturesRoute,
   GoalsRoute: GoalsRoute,
   HistoryRoute: HistoryRoute,
+  HomeRoute: HomeRoute,
   LoansRoute: LoansRoute,
   PayRoute: PayRoute,
   ReconciliationRoute: ReconciliationRoute,

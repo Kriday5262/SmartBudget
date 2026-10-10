@@ -354,6 +354,14 @@ export function SettingsPage() {
 
           {/* Group 1: Appearance & Security */}
           <IOSGroup title="Preferences & Security">
+            <Link to="/" target="_blank" rel="noopener noreferrer">
+              <IOSRow
+                icon={Sparkles}
+                iconBg="gradient-primary text-primary-foreground"
+                title="Product tour"
+                subtitle="View the public landing page"
+              />
+            </Link>
             <IOSRow
               icon={Palette}
               iconBg="bg-teal-500"

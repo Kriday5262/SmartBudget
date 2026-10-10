@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 /** Full navigation set — used by the desktop sidebar and the "More" sheet. */
 export const NAV_ITEMS = [
-  { to: "/", label: "Home", icon: Home },
+  { to: "/home", label: "Home", icon: Home },
   { to: "/budget", label: "Budget", icon: PiggyBank },
   { to: "/accounts/", label: "Accounts", icon: Wallet },
   { to: "/history", label: "History", icon: History },
@@ -35,7 +35,7 @@ export const NAV_ITEMS = [
 
 /** The four thumb-reachable tabs, split around the centre add button. */
 const LEFT_TABS = [
-  { to: "/", label: "Home", icon: Home },
+  { to: "/home", label: "Home", icon: Home },
   { to: "/budget", label: "Budget", icon: PiggyBank },
 ] as const;
 
@@ -45,7 +45,7 @@ const RIGHT_TABS = [
 ] as const;
 
 const MORE_ITEMS = NAV_ITEMS.filter(
-  (i) => !["/", "/budget", "/accounts", "/accounts/", "/history"].includes(i.to),
+  (i) => !["/home", "/budget", "/accounts", "/accounts/", "/history"].includes(i.to),
 );
 
 const NEW_ITEMS: { tab: AddTab; label: string; icon: typeof Home }[] = [

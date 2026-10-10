@@ -131,7 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           "w-64",
         )}
       >
-        <Link to="/" className="flex items-center gap-2.5 px-2 py-1">
+        <Link to="/home" className="flex items-center gap-2.5 px-2 py-1">
           <span className="num flex h-9 w-9 items-center justify-center rounded-2xl gradient-primary text-primary-foreground">
             ₹
           </span>

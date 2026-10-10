@@ -298,11 +298,11 @@ function FeatureBlock({
   );
 }
 
-export function FeatureShowcase() {
+export function FeatureShowcase({ bleed = true }: { bleed?: boolean }) {
   const hero = useReveal<HTMLElement>({ threshold: 0.05 });
 
   return (
-    <div className="apple-features -mx-4 md:-mx-8">
+    <div className={cn("apple-features", bleed && "-mx-4 md:-mx-8")}>
       {/* Hero */}
       <header
         ref={hero.ref}
@@ -335,15 +335,15 @@ export function FeatureShowcase() {
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
-            to="/"
+            to="/home"
             preload="intent"
             className="tap inline-flex items-center gap-2 rounded-full gradient-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-[var(--shadow-3d)]"
           >
             <Wallet className="h-4 w-4" />
-            Go to dashboard
+            Open app
           </Link>
           <Link
-            to="/budget"
+            to="/home"
             preload="intent"
             className="tap inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-6 py-3 text-sm font-bold backdrop-blur-sm"
           >
@@ -437,7 +437,7 @@ export function FeatureShowcase() {
                 Explore SmartPay
               </Link>
               <Link
-                to="/"
+                to="/home"
                 preload="intent"
                 className="tap inline-flex items-center gap-2 rounded-full gradient-primary px-5 py-2.5 text-sm font-bold text-primary-foreground"
               >

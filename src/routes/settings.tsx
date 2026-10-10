@@ -354,12 +354,12 @@ export function SettingsPage() {
 
           {/* Group 1: Appearance & Security */}
           <IOSGroup title="Preferences & Security">
-            <Link to="/features">
+            <Link to="/" target="_blank" rel="noopener noreferrer">
               <IOSRow
                 icon={Sparkles}
                 iconBg="gradient-primary text-primary-foreground"
-                title="Features"
-                subtitle="Apple-style tour of SmartBudget"
+                title="Product tour"
+                subtitle="View the public landing page"
               />
             </Link>
             <IOSRow

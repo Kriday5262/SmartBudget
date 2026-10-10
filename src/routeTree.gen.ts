@@ -15,6 +15,7 @@ import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as PayRouteImport } from './routes/pay'
 import { Route as ReconciliationRouteImport } from './routes/reconciliation'
@@ -52,6 +53,11 @@ const GoalsRoute = GoalsRouteImport.update({
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoansRoute = LoansRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
   '/reconciliation': typeof ReconciliationRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
   '/reconciliation': typeof ReconciliationRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
   '/reconciliation': typeof ReconciliationRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/goals'
     | '/history'
+    | '/home'
     | '/loans'
     | '/pay'
     | '/reconciliation'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/goals'
     | '/history'
+    | '/home'
     | '/loans'
     | '/pay'
     | '/reconciliation'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/goals'
     | '/history'
+    | '/home'
     | '/loans'
     | '/pay'
     | '/reconciliation'
@@ -202,6 +214,7 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   GoalsRoute: typeof GoalsRoute
   HistoryRoute: typeof HistoryRoute
+  HomeRoute: typeof HomeRoute
   LoansRoute: typeof LoansRoute
   PayRoute: typeof PayRoute
   ReconciliationRoute: typeof ReconciliationRoute
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loans': {
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   GoalsRoute: GoalsRoute,
   HistoryRoute: HistoryRoute,
+  HomeRoute: HomeRoute,
   LoansRoute: LoansRoute,
   PayRoute: PayRoute,
   ReconciliationRoute: ReconciliationRoute,

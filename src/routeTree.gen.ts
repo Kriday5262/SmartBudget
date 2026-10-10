@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BudgetRouteImport } from './routes/budget'
+import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoansRouteImport } from './routes/loans'
@@ -36,6 +37,11 @@ const AdminRoute = AdminRouteImport.update({
 const BudgetRoute = BudgetRouteImport.update({
   id: '/budget',
   path: '/budget',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GoalsRoute = GoalsRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
+  '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
+  '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
+  '/features': typeof FeaturesRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/budget'
+    | '/features'
     | '/goals'
     | '/history'
     | '/loans'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/budget'
+    | '/features'
     | '/goals'
     | '/history'
     | '/loans'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/budget'
+    | '/features'
     | '/goals'
     | '/history'
     | '/loans'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   BudgetRoute: typeof BudgetRoute
+  FeaturesRoute: typeof FeaturesRoute
   GoalsRoute: typeof GoalsRoute
   HistoryRoute: typeof HistoryRoute
   LoansRoute: typeof LoansRoute
@@ -220,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/budget'
       fullPath: '/budget'
       preLoaderRoute: typeof BudgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/goals': {
@@ -299,6 +319,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   BudgetRoute: BudgetRoute,
+  FeaturesRoute: FeaturesRoute,
   GoalsRoute: GoalsRoute,
   HistoryRoute: HistoryRoute,
   LoansRoute: LoansRoute,

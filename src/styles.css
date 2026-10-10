@@ -820,6 +820,228 @@ aside [class*="overflow-y-auto"] {
   animation: sb-native-slide 0.15s ease-out both;
 }
 
+@utility animate-fade-up {
+  animation: sb-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility animate-bounce-in {
+  animation: sb-bounce-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- Apple-style feature showcase ---------- */
+
+.apple-features {
+  --apple-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.apple-hero-glow {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, oklch(0.483 0.093 179 / 0.22), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 20%, oklch(0.774 0.113 62 / 0.12), transparent 50%),
+    radial-gradient(ellipse 50% 35% at 10% 30%, oklch(0.62 0.09 190 / 0.1), transparent 45%);
+}
+
+.apple-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.55;
+  animation: apple-orb-drift 14s var(--apple-ease) infinite alternate;
+}
+
+.apple-orb-a {
+  width: 220px;
+  height: 220px;
+  left: 8%;
+  top: 12%;
+  background: oklch(0.483 0.093 179 / 0.35);
+}
+
+.apple-orb-b {
+  width: 180px;
+  height: 180px;
+  right: 5%;
+  top: 28%;
+  background: oklch(0.774 0.113 62 / 0.28);
+  animation-delay: -4s;
+}
+
+.apple-hero-badge,
+.apple-hero-visible h1,
+.apple-hero-visible p {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: apple-hero-rise 0.9s var(--apple-ease) forwards;
+}
+
+.apple-hero-visible .apple-hero-badge {
+  animation-delay: 0.05s;
+}
+
+.apple-hero-visible h1 {
+  animation-delay: 0.12s;
+}
+
+.apple-hero-visible > p {
+  animation-delay: 0.2s;
+}
+
+.apple-hero-visible .mt-8 {
+  opacity: 0;
+  animation: apple-hero-rise 0.8s var(--apple-ease) 0.28s forwards;
+}
+
+.apple-hero-visible .mt-14 {
+  opacity: 0;
+  animation: apple-hero-rise 1s var(--apple-ease) 0.38s forwards;
+}
+
+.apple-hero-device {
+  transform: translateY(12px) scale(0.96);
+}
+
+.apple-hero-visible .apple-hero-device {
+  animation: apple-device-enter 1.1s var(--apple-ease) 0.42s forwards;
+}
+
+.apple-device-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid oklch(0.216 0.006 56 / 0.1);
+  background: oklch(1 0 0 / 0.65);
+  box-shadow: var(--shadow-lift);
+  backdrop-filter: blur(12px);
+}
+
+.dark .apple-device-frame {
+  background: oklch(0.232 0.009 60 / 0.75);
+  border-color: oklch(1 0 0 / 0.12);
+}
+
+.apple-device-notch {
+  position: absolute;
+  left: 50%;
+  top: 0.45rem;
+  z-index: 2;
+  height: 1.25rem;
+  width: 5.5rem;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: oklch(0.216 0.006 56 / 0.12);
+}
+
+.apple-device-inner {
+  min-height: 220px;
+  padding-top: 1.75rem;
+}
+
+.apple-float-slow {
+  animation: apple-float 6s ease-in-out infinite;
+}
+
+.apple-feature-section {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.85s var(--apple-ease),
+    transform 0.85s var(--apple-ease);
+}
+
+.apple-feature-section-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.apple-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.7s var(--apple-ease),
+    transform 0.7s var(--apple-ease);
+  transition-delay: var(--apple-reveal-delay, 0ms);
+}
+
+.apple-reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.apple-bento-card {
+  border-radius: 1.5rem;
+  border: 1px solid var(--border);
+  background: oklch(1 0 0 / 0.55);
+  backdrop-filter: blur(8px);
+}
+
+.dark .apple-bento-card {
+  background: oklch(0.232 0.009 60 / 0.55);
+}
+
+@keyframes apple-hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes apple-device-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes apple-orb-drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(12px, -18px) scale(1.06);
+  }
+}
+
+@keyframes apple-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apple-orb,
+  .apple-float-slow,
+  .apple-hero-badge,
+  .apple-hero-visible h1,
+  .apple-hero-visible p,
+  .apple-hero-visible .mt-8,
+  .apple-hero-visible .mt-14,
+  .apple-hero-visible .apple-hero-device {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .apple-feature-section,
+  .apple-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* Performance, Touch & Native Feel Optimizations */
 * {
   -webkit-tap-highlight-color: transparent;

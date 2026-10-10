@@ -354,6 +354,14 @@ export function SettingsPage() {
 
           {/* Group 1: Appearance & Security */}
           <IOSGroup title="Preferences & Security">
+            <Link to="/features">
+              <IOSRow
+                icon={Sparkles}
+                iconBg="gradient-primary text-primary-foreground"
+                title="Features"
+                subtitle="Apple-style tour of SmartBudget"
+              />
+            </Link>
             <IOSRow
               icon={Palette}
               iconBg="bg-teal-500"

@@ -11,6 +11,40 @@ const NAV = [
   { label: "Family", href: "#family" },
 ] as const;
 
+const SCREENSHOTS = {
+  home: { src: "/landing/home.png", alt: "SmartBudget home dashboard with Ready to Assign" },
+  budget: { src: "/landing/budget.png", alt: "SmartBudget zero-based budget view" },
+  pay: { src: "/landing/pay.png", alt: "SmartPay UPI bill splitting" },
+  reports: { src: "/landing/reports.png", alt: "SmartBudget spending reports and charts" },
+  settings: { src: "/landing/settings.png", alt: "SmartBudget settings and family profile" },
+} as const;
+
+function AppScreenshot({
+  shot,
+  priority = false,
+  size = "panel",
+}: {
+  shot: (typeof SCREENSHOTS)[keyof typeof SCREENSHOTS];
+  priority?: boolean;
+  size?: "hero" | "panel";
+}) {
+  return (
+    <figure
+      className={cn("apple-com-shot", size === "hero" && "apple-com-shot-hero")}
+    >
+      <img
+        src={shot.src}
+        alt={shot.alt}
+        width={390}
+        height={844}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={priority ? "high" : "auto"}
+      />
+    </figure>
+  );
+}
+
 function AppleLink({
   to,
   children,
@@ -70,98 +104,6 @@ function Panel({
       </div>
       <div className="apple-com-visual-wrap">{children}</div>
     </section>
-  );
-}
-
-function BudgetVisual() {
-  return (
-    <div className="apple-com-device apple-com-glow-teal">
-      <div className="apple-com-screen">
-        <p className="text-[11px] font-medium text-white/55">Ready to Assign</p>
-        <p className="num mt-2 text-4xl font-semibold tracking-tight text-white md:text-5xl">
-          ₹24,500
-        </p>
-        <div className="mt-8 space-y-3">
-          {[
-            { n: "Groceries", w: "72%" },
-            { n: "Rent", w: "100%" },
-            { n: "School", w: "45%" },
-          ].map((r) => (
-            <div key={r.n}>
-              <div className="flex justify-between text-xs text-white/70">
-                <span>{r.n}</span>
-              </div>
-              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-teal-400/90" style={{ width: r.w }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PayVisual() {
-  return (
-    <div className="apple-com-device apple-com-glow-amber">
-      <div className="apple-com-screen text-center">
-        <p className="text-sm font-semibold text-white">Dinner split</p>
-        <p className="num mt-1 text-3xl font-semibold">₹2,400</p>
-        <div className="mx-auto mt-6 max-w-[200px] rounded-2xl bg-white/10 p-4 backdrop-blur-md">
-          <p className="text-[11px] uppercase tracking-wider text-white/50">One transfer</p>
-          <p className="mt-2 text-sm font-medium">Ajay → You</p>
-          <p className="num mt-1 text-xl font-semibold text-amber-300">₹800</p>
-        </div>
-        <div className="mt-6 inline-flex rounded-full bg-white px-5 py-2 text-sm font-semibold text-black">
-          Pay with UPI
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ReportsVisual() {
-  return (
-    <div className="apple-com-device apple-com-glow-blue">
-      <div className="apple-com-screen flex flex-col justify-end">
-        <div className="flex h-40 items-end justify-center gap-2 px-4">
-          {[38, 62, 48, 78, 55, 92].map((h, i) => (
-            <div key={i} className="flex flex-1 flex-col items-center gap-1">
-              <div className="w-full max-w-3 rounded-sm bg-sky-400/90" style={{ height: `${h}%` }} />
-              <div
-                className="w-full max-w-3 rounded-sm bg-amber-400/80"
-                style={{ height: `${Math.max(h - 20, 12)}%` }}
-              />
-            </div>
-          ))}
-        </div>
-        <p className="pb-2 text-center text-xs text-white/50">Income vs expense</p>
-      </div>
-    </div>
-  );
-}
-
-function FamilyVisual() {
-  return (
-    <div className="apple-com-device apple-com-glow-violet">
-      <div className="apple-com-screen">
-        <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-lg font-semibold">
-            🏠
-          </span>
-          <div className="text-left">
-            <p className="font-semibold">Sharma Family</p>
-            <p className="text-sm text-white/55">3 members · encrypted sync</p>
-          </div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 text-center text-[11px] font-medium text-white/70">
-          {["App lock", "Avatars", "Backup", "Multi-home"].map((t) => (
-            <div key={t} className="rounded-xl bg-white/8 py-3">{t}</div>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -232,7 +174,7 @@ export function AppleComLanding() {
           </div>
         </div>
         <div className="apple-com-hero-product">
-          <BudgetVisual />
+          <AppScreenshot shot={SCREENSHOTS.home} priority size="hero" />
         </div>
       </header>
 
@@ -251,7 +193,7 @@ export function AppleComLanding() {
           subtitle="Assign income before you spend. Ready to Assign keeps the whole household honest — without the spreadsheet dread."
           learnHref="/budget"
         >
-          <BudgetVisual />
+          <AppScreenshot shot={SCREENSHOTS.budget} />
         </Panel>
 
         <Panel
@@ -268,7 +210,7 @@ export function AppleComLanding() {
           subtitle="UPI splits, minimal settlements, and shareable summaries — so hisab kitab takes seconds, not a group chat war."
           learnHref="/pay"
         >
-          <PayVisual />
+          <AppScreenshot shot={SCREENSHOTS.pay} />
         </Panel>
 
         <Panel
@@ -285,7 +227,7 @@ export function AppleComLanding() {
           subtitle="Income, expenses, categories, and net worth — presented calmly, like a keynote slide, not a tax audit."
           learnHref="/reports"
         >
-          <ReportsVisual />
+          <AppScreenshot shot={SCREENSHOTS.reports} />
         </Panel>
 
         <Panel
@@ -302,7 +244,7 @@ export function AppleComLanding() {
           subtitle="Shared homes, encrypted data, profiles with avatars, and an app lock — family finance that stays yours."
           learnHref="/settings"
         >
-          <FamilyVisual />
+          <AppScreenshot shot={SCREENSHOTS.settings} />
         </Panel>
       </div>
 

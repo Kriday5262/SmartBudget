@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { saveDB } from "./api";
-import { getCurrentHomeId, setActiveHomeId, joinUserToHome, getActiveUser, saveUsers, getRegisteredUsers } from "./lock";
+import { getCurrentHomeId, setActiveHomeId, joinUserToHome, getActiveUser, saveUsers, getRegisteredUsers, handleAuthError } from "./lock";
 import { monthKey, todayISO } from "./format";
 
 /** The four account families the app understands. */
@@ -211,7 +211,7 @@ function seed(): DB {
     goals: [],
     splits: [],
     loans: [],
-    settings: { payLinkBase: "https://pay.smarthomeskc.me/upi" },
+    settings: { payLinkBase: "" },
   };
 }
 
@@ -279,7 +279,8 @@ export async function initDB(force = false): Promise<void> {
         await saveDB({ data: { json: db, homeId } });
       }
     }
-  } catch {
+  } catch (err) {
+    handleAuthError(err);
     if (!db) db = seed();
   }
   dbInitialized = true;
@@ -287,6 +288,13 @@ export async function initDB(force = false): Promise<void> {
 }
 
 let pendingSave = false;
+
+/** Resolves once any queued or in-flight save has reached the server (max ~10s). */
+export async function waitForPendingSave(): Promise<void> {
+  for (let i = 0; i < 100 && pendingSave; i++) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
 
 export async function refreshDB(): Promise<void> {
   if (pendingSave || !dbInitialized) return;
@@ -309,7 +317,9 @@ export async function refreshDB(): Promise<void> {
         listeners.forEach((l) => l());
       }
     }
-  } catch {}
+  } catch (err) {
+    handleAuthError(err);
+  }
 }
 
 function load(): DB {
@@ -343,8 +353,9 @@ function persist() {
       .then(() => {
         pendingSave = false;
       })
-      .catch(() => {
+      .catch((err) => {
         pendingSave = false;
+        handleAuthError(err);
       });
   }, 300);
 }
@@ -1113,7 +1124,7 @@ export function resetDB() {
   listeners.forEach((l) => l());
 }
 
-/** Resolves category/account/payee names (e.g. "Pocket Money: Shantanu") to the core person name (e.g. "Shantanu") */
+/** Resolves category/account/payee names (e.g. "Pocket Money: Alex") to the core person name (e.g. "Alex") */
 export function resolvePersonName(name: string, db: DB): string {
   if (!name) return "";
   const trimName = name.trim();
@@ -1275,20 +1286,16 @@ export function minimalSettlements(db: DB): {
 
 /* ---------- household / multi-home sharing ---------- */
 
+/** Placeholder household for a budget that doesn't have one yet: the signed-in user's own. */
 export function defaultHousehold(): Household {
+  const me = getActiveUser();
+  const today = new Date().toISOString().slice(0, 10);
   return {
-    id: "home-default",
-    name: "Shantanu's Home",
+    id: me?.homeId ?? "home-default",
+    name: me?.name ? `${me.name}'s Home` : "My Home",
     code: "HOME-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-    createdAt: new Date().toISOString().slice(0, 10),
-    members: [
-      {
-        id: "mem-shantanu",
-        name: "Shantanu",
-        role: "owner",
-        joinedAt: new Date().toISOString().slice(0, 10),
-      },
-    ],
+    createdAt: today,
+    members: me ? [{ id: "mem-" + me.id, name: me.name, role: "owner", joinedAt: today }] : [],
   };
 }
 
@@ -1309,11 +1316,10 @@ export function getActiveHousehold(db: DB): Household {
 export async function createHousehold(name: string): Promise<string | null> {
   const active = getActiveUser();
   if (!active) return null;
-  const username = active.username;
   let id = "";
   try {
     const { createHomeApi } = await import("./api");
-    const res = await createHomeApi({ data: { name, username } });
+    const res = await createHomeApi({ data: { name } });
     if (res.ok && res.home) {
       id = res.home.id;
       mutate((d) => {

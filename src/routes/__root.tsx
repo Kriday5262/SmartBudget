@@ -84,17 +84,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
       },
 
-      { title: "SmartBudget — Family budgeting with AI & UPI" },
+      { title: "SmartBudget — Give every penny a purpose" },
       {
         name: "description",
         content:
-          "Zero-based family budgeting in rupees with an AI assistant and UPI bill splitting.",
+          "Zero-based family budgeting with shared households, bill splitting and an AI assistant.",
       },
-      { property: "og:title", content: "SmartBudget — Family budgeting with AI & UPI" },
+      { property: "og:title", content: "SmartBudget — Give every penny a purpose" },
       {
         property: "og:description",
         content:
-          "Zero-based family budgeting in rupees with an AI assistant and UPI bill splitting.",
+          "Zero-based family budgeting with shared households, bill splitting and an AI assistant.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

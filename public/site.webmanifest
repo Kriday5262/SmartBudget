@@ -1,13 +1,13 @@
 {
   "name": "SmartBudget",
   "short_name": "SmartBudget",
-  "description": "Family budgeting with AI & UPI",
+  "description": "Give every penny a purpose: family budgeting with shared households and an AI assistant",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f4f3ef",
-  "theme_color": "#10b981",
+  "background_color": "#f7f5ef",
+  "theme_color": "#017565",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

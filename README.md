@@ -1,4 +1,4 @@
-<img width="2048" height="768" alt="ChatGPT Image Sep 6, 2026, 07_24_36 PM" src="https://github.com/user-attachments/assets/e161cf81-3a3a-476f-a95d-e70afb6fb7bc" />
+<img width="2048" height="768" alt="SmartBudget" src="https://github.com/user-attachments/assets/e161cf81-3a3a-476f-a95d-e70afb6fb7bc" />
 
 # SmartBudget
 
@@ -39,7 +39,6 @@ A self-hosted personal & household budget manager with expense tracking, split b
 
 ### New (Sep 2026)
 - **Reconciliation Mode** reconcile account balances against bank statements
-- **Master Admin Console** full admin dashboard at `/admin` to manage all households, users, and SQLite databases
 - **Self-Hosted REST API** Jellyfin-style API at `/api/v1/` for external integrations
   - `POST /api/v1/auth` authenticate users
   - `GET /api/v1/data` fetch full budget snapshot
@@ -71,7 +70,7 @@ A self-hosted personal & household budget manager with expense tracking, split b
 Prefer working locally? You need Node.js and npm [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-git clone https://github.com/Kriday5262/smartbudget.git
+git clone <this repository's URL> smartbudget
 cd smartbudget
 npm i
 npm run dev
@@ -83,6 +82,41 @@ npm run dev
 docker build -t smartbudget .
 docker run -p 9119:9119 smartbudget
 ```
+
+## Updates
+
+SmartBudget checks GitHub once a day for a newer version. When one is out,
+**Settings → Software update** shows what changed and an **Update now** button.
+
+Because the app runs inside Docker, a small script on the host
+(`scripts/updater.sh`) does the actual update. **It sets itself up**:
+`./start.sh`, `./start.sh install`, `./start.sh rebuild` and
+`./start.sh restart` add it to your crontab if it isn't there yet (only once,
+and other cron jobs are left alone). It runs every minute but does nothing
+until someone presses **Update now**. Its log is
+`../smartbudget-backups/updater.log`.
+
+To turn one-tap updates off: `./start.sh remove-updater`. Running `./start.sh`
+again turns them back on. The host needs `cron` installed.
+
+When someone presses **Update now**:
+
+1. The app backs up every household (see **Settings → Backups**).
+2. The script copies the whole `data` folder to `../smartbudget-backups/pre-update-<date>.tar.gz`.
+3. It fast-forwards the code to `origin/main`. If the server's copy has local edits, it stops and changes nothing.
+4. It builds a new image, swaps the container, and waits for the health check.
+5. If the new version doesn't start, it puts the previous one back automatically.
+
+The `data` folder is mounted into the container, so updates never touch it.
+Try it without changing anything with `DRY_RUN=1 scripts/updater.sh`.
+
+## Backups
+
+**Settings → Backups** keeps copies of each household's budget on the
+server, stored encrypted alongside the budget itself. Choose automatic
+backups every day, week, month or year (or never), back up by hand, and
+restore any copy. Restoring first backs up the current budget, so it can be
+undone. You can also download a backup file or restore from one.
 
 ## API Usage
 

@@ -31,6 +31,12 @@ aside [class*="overflow-y-auto"] {
  */
 
 @theme inline {
+  /* Logo green — fixed across theme presets so the brand always looks the same. */
+  --color-brand: #017565;
+  /* Logo colour follows the active theme preset (always its light-mode primary). */
+  --color-logo: var(--logo);
+  --color-brand-deep: #015a4e;
+  --color-brand-light: #01836f;
   --radius-sm: calc(var(--radius) - 8px);
   --radius-md: calc(var(--radius) - 5px);
   --radius-lg: var(--radius);
@@ -80,6 +86,7 @@ aside [class*="overflow-y-auto"] {
 }
 
 :root {
+  --logo: #017565;
   --radius: 1.25rem;
 
   /* sand paper */
@@ -91,7 +98,7 @@ aside [class*="overflow-y-auto"] {
   --popover-foreground: oklch(0.216 0.006 56);
 
   /* deep teal */
-  --primary: oklch(0.483 0.093 179);
+  --primary: oklch(0.504 0.092 179);
   --primary-foreground: oklch(0.985 0.008 85);
 
   --secondary: oklch(0.948 0.01 85);
@@ -112,9 +119,9 @@ aside [class*="overflow-y-auto"] {
 
   --border: oklch(0.216 0.006 56 / 0.08);
   --input: oklch(0.216 0.006 56 / 0.12);
-  --ring: oklch(0.483 0.093 179);
+  --ring: oklch(0.504 0.092 179);
 
-  --chart-1: oklch(0.483 0.093 179);
+  --chart-1: oklch(0.504 0.092 179);
   --chart-2: oklch(0.774 0.113 62);
   --chart-3: oklch(0.62 0.09 190);
   --chart-4: oklch(0.577 0.198 22);
@@ -122,14 +129,14 @@ aside [class*="overflow-y-auto"] {
 
   --sidebar: oklch(0.985 0.008 85);
   --sidebar-foreground: oklch(0.216 0.006 56);
-  --sidebar-primary: oklch(0.483 0.093 179);
+  --sidebar-primary: oklch(0.504 0.092 179);
   --sidebar-primary-foreground: oklch(0.985 0.008 85);
   --sidebar-accent: oklch(0.948 0.01 85);
   --sidebar-accent-foreground: oklch(0.28 0.008 56);
   --sidebar-border: oklch(0.216 0.006 56 / 0.08);
-  --sidebar-ring: oklch(0.483 0.093 179);
+  --sidebar-ring: oklch(0.504 0.092 179);
 
-  --gradient-primary: linear-gradient(150deg, oklch(0.53 0.098 178) 0%, oklch(0.4 0.078 182) 100%);
+  --gradient-primary: linear-gradient(150deg, oklch(0.55 0.095 179) 0%, oklch(0.44 0.085 179) 100%);
   --gradient-warm: linear-gradient(150deg, oklch(0.82 0.11 70) 0%, oklch(0.66 0.15 45) 100%);
   --gradient-bank: linear-gradient(150deg, oklch(0.53 0.098 178) 0%, oklch(0.38 0.075 185) 100%);
   --gradient-cash: linear-gradient(150deg, oklch(0.8 0.11 72) 0%, oklch(0.63 0.12 50) 100%);
@@ -198,6 +205,7 @@ aside [class*="overflow-y-auto"] {
 
 /* SmartBudget Emerald (default) */
 [data-theme-preset="emerald"] {
+  --logo: #017565;
   /* Emerald changes accents only; keep the original warm neutral surfaces. */
   --background: oklch(0.972 0.008 85);
   --foreground: oklch(0.216 0.006 56);
@@ -214,11 +222,11 @@ aside [class*="overflow-y-auto"] {
   --sidebar-accent: oklch(0.948 0.01 85);
   --sidebar-accent-foreground: oklch(0.28 0.008 56);
   --border: oklch(0.216 0.006 56 / 0.08);
-  --primary: oklch(0.483 0.093 179);
-  --ring: oklch(0.483 0.093 179);
-  --chart-1: oklch(0.483 0.093 179);
-  --sidebar-primary: oklch(0.483 0.093 179);
-  --gradient-primary: linear-gradient(150deg, oklch(0.53 0.098 178) 0%, oklch(0.4 0.078 182) 100%);
+  --primary: oklch(0.504 0.092 179);
+  --ring: oklch(0.504 0.092 179);
+  --chart-1: oklch(0.504 0.092 179);
+  --sidebar-primary: oklch(0.504 0.092 179);
+  --gradient-primary: linear-gradient(150deg, oklch(0.55 0.095 179) 0%, oklch(0.44 0.085 179) 100%);
 }
 .dark[data-theme-preset="emerald"] {
   /* Keep dark Emerald charcoal, with teal reserved for interactive accents. */
@@ -245,6 +253,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Ocean Blue */
 [data-theme-preset="ocean"] {
+  --logo: oklch(0.55 0.18 240);
   --background: oklch(0.965 0.015 240);
   --foreground: oklch(0.22 0.012 240);
   --card: oklch(1 0 0);
@@ -290,6 +299,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Sunset Rose */
 [data-theme-preset="sunset"] {
+  --logo: oklch(0.56 0.22 15);
   --background: oklch(0.97 0.014 18);
   --foreground: oklch(0.22 0.014 18);
   --card: oklch(1 0 0);
@@ -335,6 +345,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Cyber Neon */
 [data-theme-preset="cyber"] {
+  --logo: oklch(0.52 0.25 295);
   --background: oklch(0.965 0.02 290);
   --foreground: oklch(0.2 0.02 290);
   --card: oklch(1 0 0);
@@ -380,6 +391,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Midnight Obsidian */
 [data-theme-preset="obsidian"] {
+  --logo: oklch(0.62 0.18 65);
   --background: oklch(0.972 0.014 70);
   --foreground: oklch(0.22 0.012 70);
   --card: oklch(1 0 0);
@@ -425,6 +437,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Crimson Velvet */
 [data-theme-preset="crimson"] {
+  --logo: oklch(0.48 0.22 25);
   --background: oklch(0.972 0.016 25);
   --foreground: oklch(0.2 0.016 25);
   --card: oklch(1 0 0);
@@ -470,6 +483,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Forest Sage */
 [data-theme-preset="sage"] {
+  --logo: oklch(0.48 0.16 142);
   --background: oklch(0.97 0.018 145);
   --foreground: oklch(0.2 0.016 145);
   --card: oklch(1 0 0);
@@ -515,6 +529,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Solar Amber */
 [data-theme-preset="amber"] {
+  --logo: oklch(0.58 0.21 45);
   --background: oklch(0.972 0.018 60);
   --foreground: oklch(0.2 0.018 60);
   --card: oklch(1 0 0);
@@ -560,6 +575,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Lavender Mist */
 [data-theme-preset="lavender"] {
+  --logo: oklch(0.5 0.22 280);
   --background: oklch(0.965 0.022 285);
   --foreground: oklch(0.2 0.022 285);
   --card: oklch(1 0 0);
@@ -605,6 +621,7 @@ aside [class*="overflow-y-auto"] {
 
 /* Nordic Frost */
 [data-theme-preset="nordic"] {
+  --logo: oklch(0.52 0.14 195);
   --background: oklch(0.965 0.016 200);
   --foreground: oklch(0.2 0.014 200);
   --card: oklch(1 0 0);
@@ -872,4 +889,139 @@ select {
 
 .tap:active {
   opacity: 0.75;
+}
+
+/* ── Login screen motion ─────────────────────────────────────────── */
+@keyframes sb-login-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sb-login-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(40px, -30px) scale(1.12);
+  }
+}
+
+@keyframes sb-login-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes sb-login-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes sb-login-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes sb-login-shine {
+  from {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+.sb-rise {
+  opacity: 0;
+  animation: sb-login-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Children enter one after another; re-runs whenever the form remounts. */
+.sb-stagger > * {
+  opacity: 0;
+  animation: sb-login-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.sb-stagger > :nth-child(1) { animation-delay: 40ms; }
+.sb-stagger > :nth-child(2) { animation-delay: 100ms; }
+.sb-stagger > :nth-child(3) { animation-delay: 160ms; }
+.sb-stagger > :nth-child(4) { animation-delay: 220ms; }
+.sb-stagger > :nth-child(5) { animation-delay: 280ms; }
+.sb-stagger > :nth-child(6) { animation-delay: 340ms; }
+.sb-stagger > :nth-child(7) { animation-delay: 400ms; }
+.sb-stagger > :nth-child(8) { animation-delay: 460ms; }
+
+.sb-drift {
+  animation: sb-login-drift 16s ease-in-out infinite;
+}
+.sb-drift-slow {
+  animation: sb-login-drift 22s ease-in-out -8s infinite reverse;
+}
+.sb-float {
+  animation: sb-login-float 6s ease-in-out infinite;
+}
+.sb-grow {
+  transform-origin: left;
+  animation: sb-login-grow 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) 0.6s both;
+}
+.sb-shake {
+  opacity: 1;
+  animation: sb-login-shake 0.4s ease;
+}
+
+/* Light sweep across the primary button on hover */
+.sb-shine {
+  position: relative;
+  overflow: hidden;
+}
+.sb-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.28), transparent);
+  transform: translateX(-120%) skewX(-20deg);
+  pointer-events: none;
+}
+.sb-shine:hover::after {
+  animation: sb-login-shine 0.8s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-rise,
+  .sb-stagger > *,
+  .sb-drift,
+  .sb-drift-slow,
+  .sb-float,
+  .sb-grow,
+  .sb-shake,
+  .sb-shine:hover::after {
+    animation: none !important;
+    opacity: 1 !important;
+  }
 }

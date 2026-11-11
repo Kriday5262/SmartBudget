@@ -25,7 +25,7 @@ export const THEME_PRESETS: {
   primaryColor: string;
   accentColor: string;
 }[] = [
-  { id: "emerald", label: "SmartBudget Emerald", primaryColor: "#0f766e", accentColor: "#d97706" },
+  { id: "emerald", label: "SmartBudget Emerald", primaryColor: "#017565", accentColor: "#d97706" },
   { id: "ocean", label: "Ocean Blue", primaryColor: "#0284c7", accentColor: "#06b6d4" },
   { id: "sunset", label: "Sunset Rose", primaryColor: "#e11d48", accentColor: "#fb7185" },
   { id: "cyber", label: "Cyber Neon", primaryColor: "#7c3aed", accentColor: "#06b6d4" },
@@ -45,7 +45,7 @@ function apply(mode: Mode, preset: ThemePreset, customHex?: string) {
   document.documentElement.classList.toggle("dark", dark);
   document.documentElement.setAttribute("data-theme-preset", preset);
   if (preset === "custom") {
-    const hex = (customHex ?? window.localStorage.getItem(CUSTOM_KEY) ?? "#0f766e").trim();
+    const hex = (customHex ?? window.localStorage.getItem(CUSTOM_KEY) ?? "#017565").trim();
     applyCustom(hex, dark);
   } else {
     clearCustom();
@@ -56,7 +56,7 @@ function readTheme() {
   const user = getActiveUser();
   const mode = (user?.themeMode ?? window.localStorage.getItem(KEY) ?? "system") as Mode;
   const preset = (user?.themePreset ?? window.localStorage.getItem(PRESET_KEY) ?? "emerald") as ThemePreset;
-  const customHex = user?.themeCustomHex ?? window.localStorage.getItem(CUSTOM_KEY) ?? "#0f766e";
+  const customHex = user?.themeCustomHex ?? window.localStorage.getItem(CUSTOM_KEY) ?? "#017565";
   return { mode, preset, customHex };
 }
 
@@ -64,7 +64,7 @@ function saveTheme(next: Partial<{ mode: Mode; preset: ThemePreset; customHex: s
   const user = getActiveUser();
   if (!user) return;
   import("./api").then(({ updateUserApi }) =>
-    updateUserApi({ data: { username: user.username, themeMode: next.mode, themePreset: next.preset, themeCustomHex: next.customHex } }).catch(() => {}),
+    updateUserApi({ data: { themeMode: next.mode, themePreset: next.preset, themeCustomHex: next.customHex } }).catch(() => {}),
   );
 }
 
@@ -75,7 +75,7 @@ const CUSTOM_STYLE_KEYS = [
   "--primary-foreground", "--border", "--input", "--ring", "--chart-1",
   "--sidebar", "--sidebar-foreground", "--sidebar-primary",
   "--sidebar-primary-foreground", "--sidebar-accent", "--sidebar-accent-foreground",
-  "--sidebar-border", "--gradient-primary", "--shadow-3d",
+  "--sidebar-border", "--gradient-primary", "--shadow-3d", "--logo",
 ];
 
 function clearCustom() {
@@ -104,6 +104,8 @@ function applyCustom(hex: string, dark: boolean) {
     : `linear-gradient(150deg, ${rgb(lighten(primary, 0.12))} 0%, ${rgb(darken(primary, 0.18))} 100%)`;
   const border = withAlpha(fg, dark ? 0.14 : 0.1);
 
+  // Logo keeps the light-mode shade of the custom colour in both modes.
+  el.style.setProperty("--logo", rgb(darken(seed, 0.08)));
   el.style.setProperty("--background", rgb(bg));
   el.style.setProperty("--foreground", rgb(fg));
   el.style.setProperty("--card", rgb(card));
@@ -163,7 +165,7 @@ function withAlpha(c: RGB, a: number): string {
 export function useTheme() {
   const [mode, setModeState] = useState<Mode>("system");
   const [preset, setPresetState] = useState<ThemePreset>("emerald");
-  const [customHex, setCustomHexState] = useState<string>("#0f766e");
+  const [customHex, setCustomHexState] = useState<string>("#017565");
 
   useEffect(() => {
     const loadTheme = () => {

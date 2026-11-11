@@ -37,46 +37,31 @@ function accountName(a: Account, needle: string): boolean {
   return a.name.toLowerCase().includes(needle.toLowerCase());
 }
 
-/** Case-insensitive substring match on a budget group name. */
-function groupName(g: CategoryGroup, needle: string): boolean {
-  return g.name.toLowerCase().includes(needle.toLowerCase());
-}
-
-/** One of the six fixed mappings in the reconciliation spec. */
+/**
+ * One row per budget group that has accounts named after it — for example the
+ * group "Alex" and the accounts "Alex's Savings" and "Cash: Alex". Built from
+ * the household's own data, so it works for any family.
+ */
 type ReconGroup = {
   key: string;
   label: string;
-  accountMatchers: string[];
-  /** Matched against all non-closed accounts regardless of `onBudget`, for
-   *  off-budget accounts we intentionally include (e.g. a credit card). */
-  extraAccountMatchers?: string[];
-  groupMatchers: string[];
+  group: CategoryGroup;
+  accounts: Account[];
 };
 
-const RECON_GROUPS: ReconGroup[] = [
-  {
-    key: "household",
-    label: "Household Expenses",
-    accountMatchers: ["Household", "Cash: SC", "Cash: KN"],
-    extraAccountMatchers: ["Tata Neu"],
-    groupMatchers: ["Groceries & Vegetables", "Ongoing Expenses", "Bills & Subscriptions"],
-  },
-  {
-    key: "shantanu",
-    label: "Shantanu",
-    accountMatchers: ["Shantanu"],
-    groupMatchers: ["Shantanu"],
-  },
-  { key: "raghav", label: "Raghav", accountMatchers: ["Raghav"], groupMatchers: ["Raghav"] },
-  { key: "kriday", label: "Kriday", accountMatchers: ["Kriday"], groupMatchers: ["Kriday"] },
-  { key: "kanika", label: "Kanika", accountMatchers: ["Kanika"], groupMatchers: ["Kanika"] },
-  {
-    key: "savings",
-    label: "Savings",
-    accountMatchers: ["Family Savings"],
-    groupMatchers: ["House Funds"],
-  },
-];
+function buildReconGroups(db: DB): ReconGroup[] {
+  return db.categoryGroups
+    .filter((g) => !g.hidden && g.name.trim().length >= 2)
+    .map((g) => ({
+      key: g.id,
+      label: g.name,
+      group: g,
+      // Only on-budget, open accounts, so off-budget savings (RDs/FDs) that
+      // share a name don't get pulled in.
+      accounts: db.accounts.filter((a) => a.onBudget && !a.closed && accountName(a, g.name.trim())),
+    }))
+    .filter((rg) => rg.accounts.length > 0);
+}
 
 function ReconciliationPage() {
   const db = useDB();
@@ -85,35 +70,9 @@ function ReconciliationPage() {
 
   if (!hydrated) return <div className="shimmer h-96 rounded-2xl" />;
 
-  // Group matching is scoped to on-budget operating accounts (the current
-  // savings/current accounts and cash) — this keeps person-name substrings
-  // like "Shantanu" from also grabbing off-budget RDs/FDs (e.g. "Shantanu's
-  // Savings (RD)"), so each group aligns with its intended envelope account.
-  const matchAccounts = (rg: ReconGroup) => {
-    const included: Account[] = [];
-    // On-budget operating accounts (current/savings + cash) — keeps person-name
-    // substrings like "Shantanu" from grabbing off-budget RDs/FDs by name.
-    const budgetSet = db.accounts.filter(
-      (a) => a.onBudget && !a.closed && rg.accountMatchers.some((m) => accountName(a, m)),
-    );
-    included.push(...budgetSet);
-    // Off-budget accounts we explicitly want (e.g. the Tata Neu credit card).
-    if (rg.extraAccountMatchers?.length) {
-      const extraSet = db.accounts.filter(
-        (a) => !a.closed && rg.extraAccountMatchers!.some((m) => accountName(a, m)),
-      );
-      for (const extra of extraSet) {
-        if (!included.some((a) => a.id === extra.id)) included.push(extra);
-      }
-    }
-    return included;
-  };
-  const matchGroups = (matchers: string[]) =>
-    db.categoryGroups.filter((g) => matchers.some((m) => groupName(g, m)));
-
-  const rows = RECON_GROUPS.map((rg) => {
-    const usedAccounts = matchAccounts(rg);
-    const usedGroups = matchGroups(rg.groupMatchers);
+  const rows = buildReconGroups(db).map((rg) => {
+    const usedAccounts = rg.accounts;
+    const usedGroups = [rg.group];
 
     const accountTotal = usedAccounts.reduce((s, a) => s + accountBalance(db, a.id).total, 0);
     const groupTotal = usedGroups.reduce(
@@ -165,7 +124,7 @@ function ReconciliationPage() {
           <Scale className="h-6 w-6 text-primary" /> Reconciliation
         </h1>
         <p className="text-sm text-muted-foreground">
-          {month} · Accounts vs budget envelopes — every group should net to ₹0.00.
+          {month} · Accounts vs budget envelopes — every group should net to zero.
         </p>
       </header>
 
@@ -176,6 +135,12 @@ function ReconciliationPage() {
           <span className="text-right">Difference</span>
         </div>
 
+        {rows.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+            Nothing to compare yet. Give an account the same name as a budget group (for example the
+            group “Alex” and the account “Alex's Savings”) and it appears here.
+          </p>
+        )}
         <ul className="divide-y divide-border">
           {rows.map((row) => (
             <li key={row.key}>

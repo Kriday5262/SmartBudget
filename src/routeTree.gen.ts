@@ -10,12 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as PayRouteImport } from './routes/pay'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ReconciliationRouteImport } from './routes/reconciliation'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -26,11 +26,6 @@ import { Route as CategoriesCategoryIdRouteImport } from './routes/categories.$c
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BudgetRoute = BudgetRouteImport.update({
@@ -56,6 +51,11 @@ const LoansRoute = LoansRouteImport.update({
 const PayRoute = PayRouteImport.update({
   id: '/pay',
   path: '/pay',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReconciliationRoute = ReconciliationRouteImport.update({
@@ -91,12 +91,12 @@ const CategoriesCategoryIdRoute = CategoriesCategoryIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
+  '/profile': typeof ProfileRoute
   '/reconciliation': typeof ReconciliationRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
@@ -106,12 +106,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
+  '/profile': typeof ProfileRoute
   '/reconciliation': typeof ReconciliationRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
@@ -122,12 +122,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
+  '/profile': typeof ProfileRoute
   '/reconciliation': typeof ReconciliationRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
@@ -139,12 +139,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin'
     | '/budget'
     | '/goals'
     | '/history'
     | '/loans'
     | '/pay'
+    | '/profile'
     | '/reconciliation'
     | '/reports'
     | '/settings'
@@ -154,12 +154,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/budget'
     | '/goals'
     | '/history'
     | '/loans'
     | '/pay'
+    | '/profile'
     | '/reconciliation'
     | '/reports'
     | '/settings'
@@ -169,12 +169,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/admin'
     | '/budget'
     | '/goals'
     | '/history'
     | '/loans'
     | '/pay'
+    | '/profile'
     | '/reconciliation'
     | '/reports'
     | '/settings'
@@ -185,12 +185,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
   BudgetRoute: typeof BudgetRoute
   GoalsRoute: typeof GoalsRoute
   HistoryRoute: typeof HistoryRoute
   LoansRoute: typeof LoansRoute
   PayRoute: typeof PayRoute
+  ProfileRoute: typeof ProfileRoute
   ReconciliationRoute: typeof ReconciliationRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
@@ -206,13 +206,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/budget': {
@@ -248,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/pay'
       fullPath: '/pay'
       preLoaderRoute: typeof PayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reconciliation': {
@@ -297,12 +297,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
   BudgetRoute: BudgetRoute,
   GoalsRoute: GoalsRoute,
   HistoryRoute: HistoryRoute,
   LoansRoute: LoansRoute,
   PayRoute: PayRoute,
+  ProfileRoute: ProfileRoute,
   ReconciliationRoute: ReconciliationRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,

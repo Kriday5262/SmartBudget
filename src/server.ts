@@ -23,9 +23,12 @@ async function getServerEntry(): Promise<ServerEntry> {
 /* ------------------------------------------------------------------ */
 
 const API_PREFIX = "/api/v1";
-/** The allowed browser/app origin for cross-origin (CORS) requests. */
-const APP_ORIGIN =
-  process.env.SMARTBUDGET_APP_ORIGIN || "https://budget.smarthomeskc.me";
+/**
+ * Extra browser origin allowed to call the API cross-origin, e.g.
+ * SMARTBUDGET_APP_ORIGIN=https://budget.example.com. Requests from the same
+ * host the API is served on are always allowed.
+ */
+const APP_ORIGIN = (process.env.SMARTBUDGET_APP_ORIGIN || "").replace(/\/$/, "");
 
 const SESSION_COOKIE = "smartbudget_session";
 
@@ -58,12 +61,15 @@ function readSessionToken(request: Request): string | null {
 function originAllowed(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return true; // same-origin / non-browser clients
-  const allowed = new Set([APP_ORIGIN, APP_ORIGIN.replace(/\/$/, "")]);
-  const url = new URL(APP_ORIGIN);
-  if (url.hostname === "budget.smarthomeskc.me") {
-    allowed.add(url.origin);
+  if (APP_ORIGIN && origin === APP_ORIGIN) return true;
+  // Same host as this server (also behind a proxy that forwards the host).
+  try {
+    const originHost = new URL(origin).host;
+    const hosts = [request.headers.get("x-forwarded-host"), request.headers.get("host")];
+    return hosts.some((h) => h && h.split(",")[0].trim() === originHost);
+  } catch {
+    return false;
   }
-  return allowed.has(origin);
 }
 
 function corsHeaders(request: Request): Record<string, string> {

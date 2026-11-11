@@ -1,38 +1,45 @@
 import { useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
-  Sun,
-  Moon,
-  Monitor,
-  Download,
-  Upload,
-  RotateCcw,
-  Keyboard,
-  Plus,
-  Trash2,
-  Lock as LockIcon,
-  Share2,
+  AlertTriangle,
+  ArrowLeft,
+  Check,
   Copy,
-  Users,
-  Home,
-  Palette,
-  Shield,
   CreditCard,
   Database,
-  Check,
-  Smartphone,
-  ChevronRight,
-  ChevronLeft,
+  Download,
+  Home,
+  Keyboard,
   KeyRound,
+  Lock as LockIcon,
+  Monitor,
+  Moon,
+  Palette,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  Share2,
   ShieldCheck,
-  Sparkles,
-  ShieldAlert,
-  Info,
+  Smartphone,
+  Sun,
+  Trash2,
+  Upload,
+  UserPlus,
+  X,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import {
+  Category,
+  FilledButton,
+  Group,
+  InlineForm,
+  M3Switch,
+  Radio,
+  Row,
+  TextField,
+  type Icon,
+} from "@/components/MaterialList";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +58,6 @@ import {
   replaceDB,
   resetDB,
   mutate,
-  netWorth,
   getHouseholds,
   getActiveHousehold,
   createHousehold,
@@ -59,33 +65,52 @@ import {
   addHomeMember,
   type DB,
 } from "@/lib/store";
-import { money } from "@/lib/format";
 import { useTheme, THEME_PRESETS } from "@/lib/theme";
+import { useUpdateStatus } from "@/lib/updates";
+import { BackupsPanel } from "@/components/settings/BackupsPanel";
+import { UpdatePanel } from "@/components/settings/UpdatePanel";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import {
   changePassword,
   lock,
-  getActiveUser,
+  useActiveUser,
   isRemembered,
   setRememberCookie,
   clearRememberCookie,
+  MIN_PASSWORD_LENGTH,
 } from "@/lib/lock";
+
+const SECTIONS = [
+  "appearance",
+  "security",
+  "homes",
+  "payees",
+  "backups",
+  "update",
+  "shortcuts",
+] as const;
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
+  // Each section has its own URL (?section=security) so it can be linked to
+  // and the browser's back button returns to the list.
+  validateSearch: (search: Record<string, unknown>): { section?: (typeof SECTIONS)[number] } =>
+    SECTIONS.includes(search.section as (typeof SECTIONS)[number])
+      ? { section: search.section as (typeof SECTIONS)[number] }
+      : {},
   head: () => ({
     meta: [
-      { title: "Settings — Payees, Security, Themes & Sync | SmartBudget" },
+      { title: "Settings | SmartBudget" },
       {
         name: "description",
-        content: "Manage SmartBudget themes, multi-home sync, security, and payees.",
+        content: "Manage your SmartBudget appearance, security, households, payees and backups.",
       },
     ],
   }),
 });
 
-type IOSScreen = "main" | "appearance" | "security" | "homes" | "payees" | "data" | "shortcuts";
+type Page = "main" | (typeof SECTIONS)[number];
 
 const SHORTCUTS = [
   ["Shift + L", "Add transaction"],
@@ -97,104 +122,15 @@ const SHORTCUTS = [
   ["Esc", "Close any popup"],
 ];
 
-/** Reusable iOS Inset Group Container */
-function IOSGroup({ title, children }: { title?: string; children: React.ReactNode }) {
+/* ── Page ────────────────────────────────────────────────────────── */
+
+/** Small "something new" dot, as on Android settings rows. */
+function UpdateDot() {
   return (
-    <div className="space-y-1.5">
-      {title && (
-        <p className="px-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-      )}
-      <div className="overflow-hidden rounded-[22px] border border-border/60 bg-card shadow-sm">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/** Reusable iOS Row Cell */
-function IOSRow({
-  icon: Icon,
-  iconBg = "gradient-primary text-primary-foreground",
-  title,
-  subtitle,
-  value,
-  onClick,
-  trailing,
-  isLast = false,
-}: {
-  icon: any;
-  iconBg?: string;
-  title: string;
-  subtitle?: string;
-  value?: string;
-  onClick?: () => void;
-  trailing?: React.ReactNode;
-  isLast?: boolean;
-}) {
-  const content = (
-    <div
-      onClick={onClick}
-      className={cn(
-        "group relative flex items-center justify-between gap-3 px-4 py-3.5 transition-colors no-select",
-        onClick && "tap cursor-pointer hover:bg-muted/40 active:bg-muted/70",
-      )}
-    >
-      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-        <div
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] shadow-sm text-white font-bold transition-transform group-hover:scale-105",
-            iconBg,
-          )}
-        >
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground leading-snug">{title}</p>
-          {subtitle && (
-            <p className="truncate text-[11px] font-medium text-muted-foreground mt-0.5">
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 shrink-0">
-        {value && <span className="text-xs font-semibold text-muted-foreground">{value}</span>}
-        {trailing}
-        {onClick && !trailing && (
-          <ChevronRight className="h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
-        )}
-      </div>
-
-      {!isLast && <div className="absolute bottom-0 right-0 left-14 h-[1px] bg-border/40" />}
-    </div>
-  );
-
-  return content;
-}
-
-/** iOS Style Toggle Switch */
-function IOSToggle({ checked, onChange }: { checked: boolean; onChange: (val: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-        checked ? "bg-emerald-500" : "bg-muted-foreground/30",
-      )}
-    >
-      <span
-        className={cn(
-          "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out",
-          checked ? "translate-x-5" : "translate-x-0",
-        )}
-      />
-    </button>
+    <span className="flex items-center gap-2 text-sm font-semibold text-primary">
+      <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+      <span className="sr-only">Update available</span>
+    </span>
   );
 }
 
@@ -203,29 +139,40 @@ export function SettingsPage() {
   const hydrated = useHydrated();
   const { mode, setMode, preset, setPreset, customHex, setCustomHex } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [screen, setScreen] = useState<IOSScreen>("main");
+  const { status: updateStatus } = useUpdateStatus();
+  const navigate = useNavigate({ from: "/settings" });
+  const { section } = Route.useSearch();
+  const page: Page = section ?? "main";
+  const [query, setQuery] = useState("");
 
   const [currentPass, setCurrentPass] = useState("");
   const [nextPass, setNextPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [busyPass, setBusyPass] = useState(false);
-
   const [cookieRemembered, setCookieRemembered] = useState(() => isRemembered());
 
+  const [adding, setAdding] = useState<null | "password" | "home" | "member" | "payee">(null);
   const [payee, setPayee] = useState({ name: "", vpa: "" });
-  const [confirmReset, setConfirmReset] = useState(false);
   const [newHomeName, setNewHomeName] = useState("");
   const [memberName, setMemberName] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
 
-  const activeUser = getActiveUser();
+  const activeUser = useActiveUser();
   const activeHome = getActiveHousehold(db);
   const households = getHouseholds(db);
-  const activePresetInfo = THEME_PRESETS.find((p) => p.id === preset) ?? THEME_PRESETS[0];
+  const presetLabel = THEME_PRESETS.find((p) => p.id === preset)?.label ?? "Custom colour";
 
-  if (!hydrated) return <div className="shimmer h-96 rounded-[22px]" />;
+  if (!hydrated) return <div className="shimmer mx-auto h-96 max-w-2xl rounded-[28px]" />;
+
+  function open(next: Page) {
+    setAdding(null);
+    navigate({ search: next === "main" ? {} : { section: next } });
+    window.scrollTo({ top: 0 });
+  }
 
   async function handlePasswordSave() {
-    if (nextPass.length < 4) return toast.error("Password must be at least 4 characters");
+    if (nextPass.length < MIN_PASSWORD_LENGTH)
+      return toast.error(`New password must be at least ${MIN_PASSWORD_LENGTH} characters`);
     if (nextPass !== confirmPass) return toast.error("New passwords do not match");
     setBusyPass(true);
     const ok = await changePassword(currentPass, nextPass);
@@ -234,18 +181,19 @@ export function SettingsPage() {
     setCurrentPass("");
     setNextPass("");
     setConfirmPass("");
-    toast.success("Password updated successfully!");
+    setAdding(null);
+    toast.success("Password updated");
   }
 
   function handleCookieToggle(val: boolean) {
     if (!val) {
       clearRememberCookie();
       setCookieRemembered(false);
-      toast.success("Remember cookie removed. Auth required next visit.");
+      toast.success("You'll be asked to sign in on your next visit");
     } else {
       setRememberCookie(true, true);
       setCookieRemembered(true);
-      toast.success("Infinite browser cookie enabled!");
+      toast.success("You'll stay signed in on this device");
     }
   }
 
@@ -274,609 +222,709 @@ export function SettingsPage() {
 
   function copyCode() {
     navigator.clipboard.writeText(activeHome.code);
-    toast.success("Share code copied: " + activeHome.code);
+    toast.success("Invite code copied");
   }
 
   function copyLink() {
-    const origin =
-      typeof window !== "undefined" && window.location.hostname === "budget.smarthomeskc.me"
-        ? window.location.origin
-        : "https://budget.smarthomeskc.me";
-    const url = `${origin}/?join=${activeHome.code}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Share link copied: " + url);
+    const origin = window.location.origin;
+    navigator.clipboard.writeText(`${origin}/?join=${activeHome.code}`);
+    toast.success("Invite link copied");
   }
 
+  const modeLabel = { light: "Light", dark: "Dark", system: "System" }[mode];
+  const updateSummary = !updateStatus
+    ? "Checks for new versions daily"
+    : updateStatus.updateAvailable
+      ? "Update available"
+      : `Up to date · version ${updateStatus.current.version}`;
+
+  // Top-level entries, also used for search.
+  const entries: {
+    id: string;
+    group: number;
+    icon: Icon;
+    title: string;
+    summary: string;
+    keywords: string;
+    action: () => void;
+    badge?: boolean;
+  }[] = [
+    {
+      id: "appearance",
+      group: 0,
+      icon: Palette,
+      title: "Appearance",
+      summary: `${modeLabel} mode · ${presetLabel}`,
+      keywords: "theme colour color dark light mode",
+      action: () => open("appearance"),
+    },
+    {
+      id: "security",
+      group: 0,
+      icon: ShieldCheck,
+      title: "Security",
+      summary: "Password, stay signed in",
+      keywords: "password sign in lock cookie",
+      action: () => open("security"),
+    },
+    {
+      id: "homes",
+      group: 1,
+      icon: Home,
+      title: "Households",
+      summary: `${activeHome.name} · ${activeHome.members.length} ${activeHome.members.length === 1 ? "member" : "members"}`,
+      keywords: "home family share invite code members",
+      action: () => open("homes"),
+    },
+    {
+      id: "payees",
+      group: 1,
+      icon: CreditCard,
+      title: "Payees",
+      summary: db.payees.length ? `${db.payees.length} saved` : "People you pay often",
+      keywords: "upi pay payment link split",
+      action: () => open("payees"),
+    },
+    {
+      id: "backups",
+      group: 2,
+      icon: Database,
+      title: "Backups",
+      summary: "Automatic backups, restore an older version",
+      keywords: "backup restore export import json reset schedule daily weekly monthly",
+      action: () => open("backups"),
+    },
+    {
+      id: "shortcuts",
+      group: 2,
+      icon: Keyboard,
+      title: "Keyboard shortcuts",
+      summary: "Undo, add transaction and more",
+      keywords: "keys hotkeys",
+      action: () => open("shortcuts"),
+    },
+    {
+      id: "update",
+      group: 3,
+      icon: RefreshCw,
+      title: "Software update",
+      summary: updateSummary,
+      keywords: "update upgrade version new release",
+      action: () => open("update"),
+      badge: !!updateStatus?.updateAvailable,
+    },
+    {
+      id: "lock",
+      group: 4,
+      icon: LockIcon,
+      title: "Lock app",
+      summary: "Require your password to continue",
+      keywords: "lock sign out logout",
+      action: () => lock(),
+    },
+  ];
+
+  const q = query.trim().toLowerCase();
+  const matches = q
+    ? entries.filter((e) => `${e.title} ${e.summary} ${e.keywords}`.toLowerCase().includes(q))
+    : [];
+
+  const subTitles: Record<Exclude<Page, "main">, string> = {
+    appearance: "Appearance",
+    security: "Security",
+    homes: "Households",
+    payees: "Payees",
+    backups: "Backups",
+    update: "Software update",
+    shortcuts: "Keyboard shortcuts",
+  };
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-12">
-      {/* iOS Top Navigation Bar */}
-      <div className="flex items-center justify-between pt-1">
-        {screen !== "main" ? (
-          <button
-            onClick={() => setScreen("main")}
-            className="tap -ml-2 inline-flex items-center text-sm font-bold text-primary hover:opacity-80"
-          >
-            <ChevronLeft className="h-5 w-5" /> Settings
-          </button>
-        ) : (
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Settings</h1>
-        )}
+    <div className="mx-auto max-w-2xl pb-16">
+      {page === "main" ? (
+        <div className="animate-native-slide">
+          <h1 className="px-2 pb-6 pt-6 font-display text-[40px] font-normal leading-tight tracking-tight text-foreground sm:pt-10 sm:text-5xl">
+            Settings
+          </h1>
 
-        {screen === "main" && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => lock()}
-            className="rounded-full border-border text-xs font-bold shadow-xs"
-          >
-            <LockIcon className="mr-1.5 h-3.5 w-3.5 text-primary" /> Lock
-          </Button>
-        )}
-      </div>
+          {/* Search pill */}
+          <label className="flex h-14 items-center gap-3 rounded-full bg-card px-5 shadow-sm ring-1 ring-border/60 transition-shadow focus-within:ring-2 focus-within:ring-primary/40">
+            <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search settings"
+              aria-label="Search settings"
+              className="h-full min-w-0 flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="-mr-2 flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+          </label>
 
-      {/* Main Settings Screen */}
-      {screen === "main" && (
-        <div className="space-y-6 animate-native-slide">
-          {/* iOS Profile Header Card */}
-          <IOSGroup>
-            <div className="flex items-center gap-4 p-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl gradient-primary text-xl font-bold text-primary-foreground shadow-md">
-                {activeUser?.avatarDataUrl ? (
-                  <img src={activeUser.avatarDataUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  activeUser?.name?.[0] ?? "S"
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-extrabold text-foreground">
-                  {activeUser?.name ?? "Guest"}
+          {q ? (
+            <div className="mt-6">
+              {matches.length ? (
+                <Group>
+                  {matches.map((e) => (
+                    <Row
+                      key={e.id}
+                      icon={e.icon}
+                      title={e.title}
+                      summary={e.summary}
+                      onClick={e.action}
+                    />
+                  ))}
+                </Group>
+              ) : (
+                <p className="px-5 py-10 text-center text-muted-foreground">
+                  No settings match “{query}”
                 </p>
-                <p className="truncate text-xs font-medium text-muted-foreground mt-0.5">
-                  {activeHome.name} · {db.accounts.length} Accounts · {money(netWorth(db))}
-                </p>
-              </div>
-              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary shrink-0">
-                Primary
-              </span>
+              )}
             </div>
-            <div className="border-t border-border/40">
-              <Link to="/admin">
-                <IOSRow
-                  icon={ShieldAlert}
-                  iconBg="gradient-primary text-primary-foreground"
-                  title="Master Admin Console"
-                  subtitle="Full access to all households & SQLite DBs"
-                  isLast
-                />
+          ) : (
+            <>
+              {/* Account card */}
+              <Link
+                to="/profile"
+                className="mt-6 flex items-center gap-4 rounded-[28px] bg-primary/12 px-5 py-4 transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-semibold text-primary-foreground">
+                  {activeUser?.avatarDataUrl ? (
+                    <img
+                      src={activeUser.avatarDataUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    (activeUser?.name?.[0]?.toUpperCase() ?? "S")
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-lg text-foreground">{activeUser?.name ?? "Guest"}</p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {activeUser?.username ? `@${activeUser.username} · ` : ""}
+                    {activeHome.name}
+                  </p>
+                </div>
+                <span className="ml-auto shrink-0 text-sm font-semibold text-primary">Edit</span>
               </Link>
-            </div>
-          </IOSGroup>
 
-          {/* Group 1: Appearance & Security */}
-          <IOSGroup title="Preferences & Security">
-            <IOSRow
-              icon={Palette}
-              iconBg="bg-teal-500"
-              title="Appearance & Themes"
-              subtitle={`Mode: ${mode.toUpperCase()} · Theme: ${activePresetInfo.label}`}
-              onClick={() => setScreen("appearance")}
-            />
-            <IOSRow
-              icon={ShieldCheck}
-              iconBg="bg-emerald-500"
-              title="Security & Lock"
-              subtitle="Password & session controls"
-              onClick={() => setScreen("security")}
-              isLast
-            />
-          </IOSGroup>
-
-          {/* Group 2: Shared Homes & Sync */}
-          <IOSGroup title="Smart Home & Network">
-            <IOSRow
-              icon={Home}
-              iconBg="bg-indigo-500"
-              title="Shared Homes & SQLite Sync"
-              subtitle={`Active: ${activeHome.name} (${households.length} Homes)`}
-              onClick={() => setScreen("homes")}
-              isLast
-            />
-          </IOSGroup>
-
-          {/* Group 3: Payees & UPI */}
-          <IOSGroup title="Payments & Payees">
-            <IOSRow
-              icon={CreditCard}
-              iconBg="bg-amber-500"
-              title="Payees & UPI VPA"
-              subtitle={`${db.payees.length} Saved Payees`}
-              onClick={() => setScreen("payees")}
-              isLast
-            />
-          </IOSGroup>
-
-          {/* Group 4: Data & Backup */}
-          <IOSGroup title="System & Data">
-            <IOSRow
-              icon={Database}
-              iconBg="bg-slate-600"
-              title="Data & Backup"
-              subtitle="Export JSON, Import restore, Reset data"
-              onClick={() => setScreen("data")}
-            />
-            <IOSRow
-              icon={Keyboard}
-              iconBg="bg-purple-600"
-              title="Keyboard Shortcuts"
-              subtitle="Cheatsheet for power users"
-              onClick={() => setScreen("shortcuts")}
-              isLast
-            />
-          </IOSGroup>
-        </div>
-      )}
-
-      {/* Sub-Screen: Appearance & Themes */}
-      {screen === "appearance" && (
-        <div className="space-y-6 animate-native-slide">
-          <IOSGroup title="Display Mode">
-            <div className="p-3">
-              <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-muted p-1.5">
-                {(
-                  [
-                    { k: "light", label: "Light", icon: Sun },
-                    { k: "dark", label: "Dark", icon: Moon },
-                    { k: "system", label: "System", icon: Monitor },
-                  ] as const
-                ).map((o) => (
-                  <button
-                    key={o.k}
-                    onClick={() => setMode(o.k)}
-                    className={cn(
-                      "tap flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all",
-                      mode === o.k
-                        ? "bg-card text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <o.icon className="h-3.5 w-3.5" />
-                    {o.label}
-                  </button>
+              <div className="mt-4 space-y-4">
+                {[0, 1, 2, 3, 4].map((g) => (
+                  <Group key={g}>
+                    {entries
+                      .filter((e) => e.group === g)
+                      .map((e) => (
+                        <Row
+                          key={e.id}
+                          icon={e.icon}
+                          title={e.title}
+                          summary={e.summary}
+                          onClick={e.action}
+                          trailing={e.badge ? <UpdateDot /> : undefined}
+                        />
+                      ))}
+                  </Group>
                 ))}
               </div>
-            </div>
-          </IOSGroup>
+            </>
+          )}
+        </div>
+      ) : (
+        <div key={page} className="animate-native-slide">
+          {/* Sub-page app bar */}
+          <div className="-ml-1 pt-2">
+            <button
+              type="button"
+              onClick={() => open("main")}
+              aria-label="Back to settings"
+              className="flex h-12 w-12 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+          </div>
+          <h1 className="px-2 pb-2 pt-4 font-display text-[36px] font-normal leading-tight tracking-tight text-foreground sm:text-[44px]">
+            {subTitles[page]}
+          </h1>
 
-          <IOSGroup title="10 Color Palette Themes">
-            <div className="p-4 space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Tap any theme preset to instantly change the entire app's accent and visual theme.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
-                {THEME_PRESETS.map((p) => {
-                  const active = preset === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        setPreset(p.id);
-                        toast.success(`Theme set to ${p.label}`);
-                      }}
+          {page === "appearance" && (
+            <>
+              <Category>Mode</Category>
+              <Group>
+                <div className="bg-card px-5 py-5">
+                  <div
+                    role="radiogroup"
+                    aria-label="Colour mode"
+                    className="grid grid-cols-3 overflow-hidden rounded-full border border-muted-foreground/40"
+                  >
+                    {(
+                      [
+                        { k: "light", label: "Light", icon: Sun },
+                        { k: "dark", label: "Dark", icon: Moon },
+                        { k: "system", label: "System", icon: Monitor },
+                      ] as const
+                    ).map((o, i) => {
+                      const on = mode === o.k;
+                      return (
+                        <button
+                          key={o.k}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setMode(o.k)}
+                          className={cn(
+                            "flex h-11 items-center justify-center gap-2 text-sm font-semibold transition-colors",
+                            i > 0 && "border-l border-muted-foreground/40",
+                            on
+                              ? "bg-primary/20 text-foreground"
+                              : "text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          {on ? (
+                            <Check className="h-4 w-4" strokeWidth={2.5} />
+                          ) : (
+                            <o.icon className="h-4 w-4" />
+                          )}
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Group>
+
+              <Category>Theme colour</Category>
+              <Group>
+                <div className="bg-card px-5 py-6">
+                  <div className="grid grid-cols-5 gap-y-5 sm:gap-y-6">
+                    {THEME_PRESETS.map((p) => {
+                      const on = preset === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          aria-pressed={on}
+                          aria-label={p.label}
+                          title={p.label}
+                          onClick={() => setPreset(p.id)}
+                          className="group flex flex-col items-center gap-2 focus-visible:outline-none"
+                        >
+                          <span
+                            className={cn(
+                              "relative flex h-14 w-14 items-center justify-center rounded-full transition-transform group-hover:scale-105 group-focus-visible:ring-2 group-focus-visible:ring-ring",
+                              on && "ring-2 ring-foreground ring-offset-4 ring-offset-card",
+                            )}
+                            style={{
+                              background: `conic-gradient(${p.primaryColor} 0 50%, ${p.accentColor} 50% 100%)`,
+                            }}
+                          >
+                            {on && (
+                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-card text-foreground shadow">
+                                <Check className="h-4 w-4" strokeWidth={3} />
+                              </span>
+                            )}
+                          </span>
+                          <span className="line-clamp-2 max-w-[72px] text-center text-[11px] leading-tight text-muted-foreground">
+                            {p.label.replace("SmartBudget ", "")}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <Row
+                  leading={
+                    <label
                       className={cn(
-                        "tap relative flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-all",
-                        active
-                          ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20"
-                          : "border-border bg-card hover:bg-muted/50",
+                        "relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full",
+                        preset === "custom" &&
+                          "ring-2 ring-foreground ring-offset-2 ring-offset-card",
                       )}
+                      style={{ background: customHex }}
                     >
-                      <div
-                        className="flex h-7 w-7 items-center justify-center rounded-full shadow-inner"
-                        style={{ background: p.primaryColor }}
-                      >
-                        <div
-                          className="h-3 w-3 rounded-full"
-                          style={{ background: p.accentColor }}
-                        />
-                      </div>
-                      <span className="text-xs font-bold truncate w-full text-foreground">
-                        {p.label}
-                      </span>
-                      {active && (
-                        <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full gradient-primary text-[9px] text-primary-foreground font-black">
-                          ✓
-                        </span>
-                      )}
-                    </button>
+                      <input
+                        type="color"
+                        value={/^#[0-9a-fA-F]{6}$/.test(customHex) ? customHex : "#017565"}
+                        onChange={(e) => {
+                          setPreset("custom");
+                          setCustomHex(e.target.value);
+                        }}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        aria-label="Choose custom colour"
+                      />
+                    </label>
+                  }
+                  title="Custom colour"
+                  summary={preset === "custom" ? "In use" : "Tap the circle to pick any colour"}
+                  trailing={
+                    <input
+                      type="text"
+                      value={customHex}
+                      aria-label="Custom colour hex code"
+                      spellCheck={false}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCustomHex(v);
+                        if (/^#[0-9a-fA-F]{6}$/.test(v)) setPreset("custom");
+                      }}
+                      className="h-10 w-28 rounded-full border border-border bg-background/60 px-4 font-mono text-sm uppercase text-foreground focus:border-primary focus:outline-none"
+                    />
+                  }
+                />
+              </Group>
+            </>
+          )}
+
+          {page === "security" && (
+            <>
+              <Category>Sign-in</Category>
+              <Group>
+                <Row
+                  icon={Smartphone}
+                  title="Stay signed in on this device"
+                  summary="Turn off to enter your password on every visit"
+                  trailing={
+                    <M3Switch
+                      checked={cookieRemembered}
+                      onChange={handleCookieToggle}
+                      label="Stay signed in on this device"
+                    />
+                  }
+                />
+                <Row
+                  icon={LockIcon}
+                  title="Lock app now"
+                  summary="You'll need your password to get back in"
+                  onClick={() => lock()}
+                />
+              </Group>
+
+              <Category>Password</Category>
+              <Group>
+                <Row
+                  icon={KeyRound}
+                  title="Change password"
+                  summary={`At least ${MIN_PASSWORD_LENGTH} characters`}
+                  onClick={() => setAdding(adding === "password" ? null : "password")}
+                />
+                {adding === "password" && (
+                  <InlineForm
+                    submitLabel={busyPass ? "Saving…" : "Save"}
+                    onCancel={() => setAdding(null)}
+                    onSubmit={handlePasswordSave}
+                  >
+                    <TextField
+                      label="Current password"
+                      type="password"
+                      autoComplete="current-password"
+                      autoFocus
+                      value={currentPass}
+                      onChange={(e) => setCurrentPass(e.target.value)}
+                    />
+                    <TextField
+                      label="New password"
+                      type="password"
+                      autoComplete="new-password"
+                      hint={`At least ${MIN_PASSWORD_LENGTH} characters`}
+                      value={nextPass}
+                      onChange={(e) => setNextPass(e.target.value)}
+                    />
+                    <TextField
+                      label="Confirm new password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPass}
+                      onChange={(e) => setConfirmPass(e.target.value)}
+                    />
+                  </InlineForm>
+                )}
+              </Group>
+            </>
+          )}
+
+          {page === "homes" && (
+            <>
+              <Category>Invite to {activeHome.name}</Category>
+              <Group>
+                <div className="bg-card px-5 py-6 text-center">
+                  <p className="text-sm text-muted-foreground">Invite code</p>
+                  <p className="num mt-1 text-3xl font-semibold tracking-[0.18em] text-foreground">
+                    {activeHome.code}
+                  </p>
+                  <div className="mt-5 flex justify-center gap-2">
+                    <FilledButton variant="tonal" onClick={copyLink}>
+                      <Share2 className="h-4 w-4" /> Copy link
+                    </FilledButton>
+                    <FilledButton variant="tonal" onClick={copyCode}>
+                      <Copy className="h-4 w-4" /> Copy code
+                    </FilledButton>
+                  </div>
+                </div>
+              </Group>
+
+              <Category>Your households</Category>
+              <Group>
+                {households.map((h) => {
+                  const on = h.id === activeHome.id;
+                  return (
+                    <Row
+                      key={h.id}
+                      icon={Home}
+                      title={h.name}
+                      summary={on ? "Current household" : `Code ${h.code}`}
+                      onClick={() => {
+                        if (on) return;
+                        switchHousehold(h.id);
+                        toast.success(`Switched to ${h.name}`);
+                      }}
+                      trailing={<Radio checked={on} />}
+                    />
                   );
                 })}
-              </div>
-            </div>
-          </IOSGroup>
+                {adding === "home" ? (
+                  <InlineForm
+                    submitLabel="Create"
+                    onCancel={() => setAdding(null)}
+                    onSubmit={() => {
+                      if (!newHomeName.trim()) return toast.error("Enter a household name");
+                      createHousehold(newHomeName.trim());
+                      setNewHomeName("");
+                      setAdding(null);
+                      toast.success("Household created");
+                    }}
+                  >
+                    <TextField
+                      label="Household name"
+                      autoFocus
+                      value={newHomeName}
+                      onChange={(e) => setNewHomeName(e.target.value)}
+                    />
+                  </InlineForm>
+                ) : (
+                  <Row icon={Plus} title="Add household" onClick={() => setAdding("home")} />
+                )}
+              </Group>
 
-          {/* Custom Theme */}
-          <IOSGroup title="Custom Theme">
-            <div className="p-4 space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Pick any color and the whole palette — background, cards, sidebar, gradients —
-                is generated automatically from it.
-              </p>
-              <div className="flex items-center gap-3">
-                <label
-                  className={cn(
-                    "tap relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 transition-all",
-                    preset === "custom"
-                      ? "border-primary shadow-sm ring-2 ring-primary/20"
-                      : "border-border hover:border-primary/40",
-                  )}
-                >
-                  <input
-                    type="color"
-                    value={/^#[0-9a-fA-F]{6}$/.test(customHex) ? customHex : "#0f766e"}
-                    onChange={(e) => {
-                      setPreset("custom");
-                      setCustomHex(e.target.value);
-                      toast.success("Custom theme applied");
-                    }}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    aria-label="Custom theme color"
+              <Category>Members</Category>
+              <Group>
+                {activeHome.members.map((m) => (
+                  <Row
+                    key={m.id}
+                    leading={
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-semibold text-primary">
+                        {m.name[0]?.toUpperCase()}
+                      </span>
+                    }
+                    title={m.name}
+                    summary={m.role === "owner" ? "Owner" : "Member"}
                   />
-                  <span
-                    className="h-6 w-6 rounded-full shadow-inner"
-                    style={{ background: customHex }}
-                  />
-                </label>
-                <div className="min-w-0 flex-1">
-                  <input
-                    type="text"
-                    value={customHex}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setCustomHex(v);
-                      if (/^#[0-9a-fA-F]{6}$/.test(v)) {
-                        setPreset("custom");
-                        toast.success("Custom theme applied");
-                      }
+                ))}
+                {adding === "member" ? (
+                  <InlineForm
+                    submitLabel="Add"
+                    onCancel={() => setAdding(null)}
+                    onSubmit={() => {
+                      if (!memberName.trim()) return toast.error("Enter a name");
+                      addHomeMember(memberName.trim());
+                      setMemberName("");
+                      setAdding(null);
+                      toast.success("Member added");
                     }}
-                    placeholder="#0f766e"
-                    className="h-11 w-full rounded-2xl border border-input bg-card px-3 font-mono text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+                  >
+                    <TextField
+                      label="Name"
+                      autoFocus
+                      value={memberName}
+                      onChange={(e) => setMemberName(e.target.value)}
+                    />
+                  </InlineForm>
+                ) : (
+                  <Row icon={UserPlus} title="Add member" onClick={() => setAdding("member")} />
+                )}
+              </Group>
+            </>
+          )}
+
+          {page === "payees" && (
+            <>
+              <Category>Saved payees</Category>
+              <Group>
+                {db.payees.map((p) => (
+                  <Row
+                    key={p.id}
+                    leading={
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-semibold text-primary">
+                        {p.name[0]?.toUpperCase()}
+                      </span>
+                    }
+                    title={p.name}
+                    summary={p.upiVpa || "No payment ID"}
+                    trailing={
+                      <button
+                        type="button"
+                        aria-label={`Delete ${p.name}`}
+                        onClick={() => {
+                          mutate((d) => (d.payees = d.payees.filter((x) => x.id !== p.id)));
+                          toast.success("Payee removed");
+                        }}
+                        className="-mr-2 flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    }
+                  />
+                ))}
+                {adding === "payee" ? (
+                  <InlineForm
+                    submitLabel="Save"
+                    onCancel={() => setAdding(null)}
+                    onSubmit={() => {
+                      if (!payee.name.trim()) return toast.error("Enter a payee name");
+                      addPayee(payee.name.trim(), payee.vpa.trim() || undefined);
+                      setPayee({ name: "", vpa: "" });
+                      setAdding(null);
+                      toast.success("Payee added");
+                    }}
+                  >
+                    <TextField
+                      label="Name"
+                      autoFocus
+                      value={payee.name}
+                      onChange={(e) => setPayee({ ...payee, name: e.target.value })}
+                    />
+                    <TextField
+                      label="UPI ID (optional)"
+                      hint="For example name@bank"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      value={payee.vpa}
+                      onChange={(e) => setPayee({ ...payee, vpa: e.target.value })}
+                    />
+                  </InlineForm>
+                ) : (
+                  <Row
+                    icon={Plus}
+                    title="Add payee"
+                    summary={db.payees.length ? undefined : "Save people you pay often"}
+                    onClick={() => setAdding("payee")}
+                  />
+                )}
+              </Group>
+
+              <Category>Payment links</Category>
+              <Group>
+                <div className="bg-card px-5 py-5">
+                  <TextField
+                    label="Link address"
+                    hint="Used when you share a payment link in chat apps"
+                    placeholder="https://budget.example.com"
+                    value={db.settings.payLinkBase ?? ""}
+                    onChange={(e) => setSetting("payLinkBase", e.target.value)}
                   />
                 </div>
-                {preset === "custom" && (
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-                    Active
-                  </span>
-                )}
-              </div>
-            </div>
-          </IOSGroup>
-        </div>
-      )}
+              </Group>
+            </>
+          )}
 
-      {/* Sub-Screen: Security & Lock */}
-      {screen === "security" && (
-        <div className="space-y-6 animate-native-slide">
-          <IOSGroup title="Session & Lock">
-            <IOSRow
-              icon={Smartphone}
-              iconBg="bg-blue-500"
-              title="Remember Device Cookie"
-              subtitle="Keep session logged in infinitely on this browser"
-              trailing={<IOSToggle checked={cookieRemembered} onChange={handleCookieToggle} />}
-              isLast
-            />
-          </IOSGroup>
+          {page === "update" && <UpdatePanel />}
 
-          <IOSGroup title="Password Management">
-            <div className="p-4 space-y-3">
-              <Input
-                type="password"
-                placeholder="Current password"
-                value={currentPass}
-                onChange={(e) => setCurrentPass(e.target.value)}
-                className="h-11 rounded-2xl"
-              />
-              <Input
-                type="password"
-                placeholder="New password"
-                value={nextPass}
-                onChange={(e) => setNextPass(e.target.value)}
-                className="h-11 rounded-2xl"
-              />
-              <Input
-                type="password"
-                placeholder="Confirm new password"
-                value={confirmPass}
-                onChange={(e) => setConfirmPass(e.target.value)}
-                className="h-11 rounded-2xl"
-              />
-              <Button
-                onClick={handlePasswordSave}
-                disabled={busyPass || !currentPass || !nextPass}
-                className="h-11 w-full rounded-2xl font-bold gradient-primary text-primary-foreground shadow"
-              >
-                {busyPass ? "Updating…" : "Update Password"}
-              </Button>
-            </div>
-          </IOSGroup>
-        </div>
-      )}
+          {page === "backups" && (
+            <>
+              <BackupsPanel />
 
-      {/* Sub-Screen: Shared Homes & Sync */}
-      {screen === "homes" && (
-        <div className="space-y-6 animate-native-slide">
-          <IOSGroup title="Active Home Share & Invite">
-            <IOSRow
-              icon={Home}
-              iconBg="bg-indigo-500"
-              title={activeHome.name}
-              subtitle={`Code: ${activeHome.code} · ${activeHome.members.length} Members`}
-              value="Active"
-            />
-            <div className="flex gap-2 p-3 bg-muted/20 border-t border-border/40">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyLink}
-                className="flex-1 rounded-xl font-bold text-xs border-border"
-              >
-                <Share2 className="mr-1.5 h-3.5 w-3.5 text-primary" /> Copy Invite Link
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyCode}
-                className="flex-1 rounded-xl font-bold text-xs border-border"
-              >
-                <Copy className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Copy Code
-              </Button>
-            </div>
-          </IOSGroup>
-
-          <IOSGroup title="Switch Household Database">
-            {households.map((h, i) => (
-              <IOSRow
-                key={h.id}
-                icon={Home}
-                iconBg={
-                  h.id === activeHome.id
-                    ? "gradient-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }
-                title={h.name}
-                subtitle={`Code: ${h.code}`}
-                onClick={() => {
-                  switchHousehold(h.id);
-                  toast.success(`Switched to ${h.name}`);
+              <Category>Backup file</Category>
+              <Group>
+                <Row
+                  icon={Download}
+                  title="Download a backup file"
+                  summary="Keep a copy of this budget on your own device"
+                  onClick={exportData}
+                />
+                <Row
+                  icon={Upload}
+                  title="Restore from a file"
+                  summary="Replaces your current budget with the file's"
+                  onClick={() => fileRef.current?.click()}
+                />
+              </Group>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) importData(f);
+                  e.target.value = "";
                 }}
-                trailing={
-                  h.id === activeHome.id ? <Check className="h-5 w-5 text-primary" /> : null
-                }
-                isLast={i === households.length - 1}
               />
-            ))}
-          </IOSGroup>
 
-          <IOSGroup title="Create New Shared Home">
-            <div className="p-4 space-y-3">
-              <Input
-                placeholder="Home Name (e.g. Vacation Home)"
-                value={newHomeName}
-                onChange={(e) => setNewHomeName(e.target.value)}
-                className="h-11 rounded-2xl"
-              />
-              <Button
-                onClick={() => {
-                  if (!newHomeName.trim()) return toast.error("Enter home name");
-                  createHousehold(newHomeName.trim());
-                  setNewHomeName("");
-                  toast.success("Home created!");
-                }}
-                className="h-11 w-full rounded-2xl font-bold gradient-primary text-primary-foreground shadow"
-              >
-                <Plus className="mr-1.5 h-4 w-4" /> Create Home
-              </Button>
-            </div>
-          </IOSGroup>
+              <Category>Reset</Category>
+              <Group>
+                <Row
+                  icon={RotateCcw}
+                  tone="danger"
+                  title="Reset data"
+                  summary="Clear everything stored in this browser"
+                  onClick={() => setConfirmReset(true)}
+                />
+              </Group>
+            </>
+          )}
 
-          <IOSGroup title={`Home Members (${activeHome.members.length})`}>
-            <div className="p-4 space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {activeHome.members.map((m) => (
-                  <span
-                    key={m.id}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-muted/50 px-3 py-1.5 text-xs font-semibold text-foreground"
-                  >
-                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    {m.name} {m.role === "owner" && "(Owner)"}
-                  </span>
+          {page === "shortcuts" && (
+            <>
+              <Category>Shortcuts</Category>
+              <Group>
+                {SHORTCUTS.map(([keys, what]) => (
+                  <Row
+                    key={keys}
+                    title={what}
+                    trailing={
+                      <kbd className="num shrink-0 rounded-lg bg-muted px-2.5 py-1 text-xs font-semibold text-foreground">
+                        {keys}
+                      </kbd>
+                    }
+                  />
                 ))}
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Input
-                  placeholder="Member Name (e.g. Spouse)"
-                  value={memberName}
-                  onChange={(e) => setMemberName(e.target.value)}
-                  className="h-11 rounded-2xl"
-                />
-                <Button
-                  onClick={() => {
-                    if (!memberName.trim()) return toast.error("Enter member name");
-                    addHomeMember(memberName.trim());
-                    setMemberName("");
-                    toast.success("Member added!");
-                  }}
-                  variant="secondary"
-                  className="h-11 rounded-2xl font-bold shrink-0"
-                >
-                  Add Member
-                </Button>
-              </div>
-            </div>
-          </IOSGroup>
+              </Group>
+            </>
+          )}
         </div>
       )}
 
-      {/* Sub-Screen: Payees & UPI */}
-      {screen === "payees" && (
-        <div className="space-y-6 animate-native-slide">
-          <IOSGroup title={`Saved Payees (${db.payees.length})`}>
-            {db.payees.length === 0 ? (
-              <div className="p-4 text-xs text-muted-foreground italic">No saved payees yet.</div>
-            ) : (
-              db.payees.map((p, i) => (
-                <IOSRow
-                  key={p.id}
-                  icon={CreditCard}
-                  iconBg="bg-amber-500"
-                  title={p.name}
-                  subtitle={p.upiVpa || "No UPI ID set"}
-                  trailing={
-                    <button
-                      aria-label={`Delete ${p.name}`}
-                      onClick={() => {
-                        mutate((d) => (d.payees = d.payees.filter((x) => x.id !== p.id)));
-                        toast.success("Payee removed");
-                      }}
-                      className="tap rounded-xl p-2 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  }
-                  isLast={i === db.payees.length - 1}
-                />
-              ))
-            )}
-          </IOSGroup>
-
-          <IOSGroup title="Add New Payee">
-            <div className="p-4 space-y-3">
-              <Input
-                placeholder="Payee Name"
-                value={payee.name}
-                onChange={(e) => setPayee({ ...payee, name: e.target.value })}
-                className="h-11 rounded-2xl"
-              />
-              <Input
-                placeholder="UPI ID (e.g. name@upi)"
-                value={payee.vpa}
-                onChange={(e) => setPayee({ ...payee, vpa: e.target.value })}
-                className="h-11 rounded-2xl"
-              />
-              <Button
-                onClick={() => {
-                  if (!payee.name.trim()) return toast.error("Enter payee name");
-                  addPayee(payee.name.trim(), payee.vpa.trim() || undefined);
-                  setPayee({ name: "", vpa: "" });
-                  toast.success("Payee added");
-                }}
-                className="h-11 w-full rounded-2xl font-bold gradient-primary text-primary-foreground shadow"
-              >
-                <Plus className="mr-1.5 h-4 w-4" /> Save Payee
-              </Button>
-            </div>
-          </IOSGroup>
-
-          <IOSGroup title="Pay Link Base URL">
-            <div className="p-4 space-y-2">
-              <Input
-                placeholder="https://budget.smarthomeskc.me"
-                value={db.settings.payLinkBase ?? ""}
-                onChange={(e) => setSetting("payLinkBase", e.target.value)}
-                className="h-11 rounded-2xl"
-              />
-            </div>
-          </IOSGroup>
-        </div>
-      )}
-
-      {/* Sub-Screen: Data & Backup */}
-      {screen === "data" && (
-        <div className="space-y-6 animate-native-slide">
-          <IOSGroup title="Backup & Restore">
-            <IOSRow
-              icon={Download}
-              iconBg="bg-blue-500"
-              title="Export JSON Backup"
-              subtitle="Download a complete copy of all your accounts and transactions"
-              onClick={exportData}
-            />
-            <IOSRow
-              icon={Upload}
-              iconBg="bg-emerald-500"
-              title="Import JSON Backup"
-              subtitle="Restore data from a previously downloaded JSON file"
-              onClick={() => fileRef.current?.click()}
-              isLast
-            />
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) importData(f);
-              }}
-            />
-          </IOSGroup>
-
-          <IOSGroup title="Emergency Reset">
-            <div className="p-4">
-              <Button
-                variant="destructive"
-                className="w-full h-11 rounded-2xl font-bold shadow-sm"
-                onClick={() => setConfirmReset(true)}
-              >
-                <RotateCcw className="mr-2 h-4 w-4" /> Reset Local Data & Reload
-              </Button>
-            </div>
-          </IOSGroup>
-        </div>
-      )}
-
-      {/* Sub-Screen: Shortcuts */}
-      {screen === "shortcuts" && (
-        <div className="space-y-6 animate-native-slide">
-          <IOSGroup title="Keyboard Cheatsheet">
-            {SHORTCUTS.map(([keys, what], i) => (
-              <IOSRow
-                key={keys}
-                icon={Keyboard}
-                iconBg="bg-purple-600"
-                title={what}
-                trailing={
-                  <span className="num rounded-xl border border-border bg-card px-2.5 py-1 text-xs font-bold text-primary shadow-2xs">
-                    {keys}
-                  </span>
-                }
-                isLast={i === SHORTCUTS.length - 1}
-              />
-            ))}
-          </IOSGroup>
-        </div>
-      )}
-
-      {/* Reset Confirmation Dialog */}
+      {/* Reset confirmation (Material dialog) */}
       <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
-        <AlertDialogContent className="rounded-[24px] border-border bg-card p-6 shadow-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-bold text-destructive">
-              Reset local data?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
-              This resets your in-browser state. Make sure you have exported a JSON backup first.
+        <AlertDialogContent className="max-w-sm rounded-[28px] border-0 bg-card p-6 shadow-2xl">
+          <AlertDialogHeader className="items-center text-center sm:text-center">
+            <AlertTriangle className="mb-2 h-6 w-6 text-destructive" />
+            <AlertDialogTitle className="text-2xl font-normal">Reset all data?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed text-muted-foreground">
+              This clears everything stored in this browser and can't be undone. Download a backup
+              first if you might need it.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11 rounded-2xl font-bold">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="mt-2 flex-row justify-end gap-2 sm:space-x-0">
+            <AlertDialogCancel className="mt-0 h-10 rounded-full border-0 bg-transparent px-4 font-semibold text-primary shadow-none hover:bg-primary/10">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              className="h-11 rounded-2xl font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="h-10 rounded-full bg-transparent px-4 font-semibold text-destructive shadow-none hover:bg-destructive/10"
               onClick={() => {
                 resetDB();
-                toast.success("Database reset to defaults");
+                toast.success("Data reset");
               }}
             >
-              Reset Data
+              Reset
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

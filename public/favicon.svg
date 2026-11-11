@@ -1,19 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#f4f3ef"/>
-  <circle cx="400" cy="112" r="116" fill="#10b981" opacity="0.16"/>
-  <defs>
-    <linearGradient id="emerald" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#10b981"/>
-      <stop offset="1" stop-color="#047857"/>
-    </linearGradient>
-  </defs>
-  <rect x="96" y="188" width="320" height="200" rx="24" fill="url(#emerald)"/>
-  <path d="M 124 214 L 256 302 L 388 214" fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="12" stroke-linecap="round"/>
-  <g stroke="#ffffff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M 207.7 213 H 307.7"/>
-    <path d="M 207.7 254.7 H 307.7"/>
-    <path d="M 232.7 296.3 C 288.3 296.3 288.3 213 232.7 213"/>
-    <path d="M 207.7 296.3 H 232.7"/>
-    <path d="M 207.7 296.3 L 278.6 363"/>
-  </g>
+  <rect width="512" height="512" rx="112" fill="#f7f5ef"/>
+  <svg x="76" y="72" width="360" height="364" viewBox="230 200 840 850" fill="#017565">
+    <defs>
+      <clipPath id="p"><rect x="0" y="0" width="1300" height="596"/></clipPath>
+      <mask id="g" maskUnits="userSpaceOnUse" x="0" y="0" width="1300" height="1300">
+        <rect width="1300" height="1300" fill="#fff"/>
+        <g stroke="#000" stroke-width="20" stroke-linecap="round" fill="none">
+          <line x1="637" y1="190" x2="637" y2="600"/>
+          <line x1="645" y1="478" x2="900" y2="295"/>
+          <path d="M940,520 L940,560 C935,590 925,606 900,606 L360,606 C320,606 285,590 272,560 C262,535 285,512 318,512"/>
+        </g>
+        <polygon points="637,488 845,602 637,602" fill="#000"/>
+        <rect x="780" y="703" width="320" height="202" rx="101" fill="#000"/>
+      </mask>
+    </defs>
+    <g mask="url(#g)">
+      <circle cx="637" cy="505" r="287" clip-path="url(#p)"/>
+      <path d="M318,498 C275,498 245,528 245,565 L245,945 C245,995 290,1035 345,1035 L885,1035 C940,1035 980,995 980,945 L980,706 L1010,706 L1010,580 C1010,545 985,518 950,518 L940,518 L940,560 C935,590 925,606 900,606 L360,606 C320,606 285,590 272,560 C262,535 285,512 318,512 Z"/>
+    </g>
+    <path fill-rule="evenodd" d="M880,725 L1030,725 Q1050,725 1050,745 L1050,863 Q1050,883 1030,883 L880,883 A79,79 0 0 1 880,725 Z M892,765 A43,43 0 1 0 892.01,765 Z"/>
+  </svg>
 </svg>

@@ -14,11 +14,13 @@ import { money } from "@/lib/format";
 import { uiActions } from "@/lib/ui-store";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { LockScreen } from "./LockScreen";
+import { LogoMark } from "./Logo";
 import { hydrateLock, hydrateUsers, useUnlocked, lock } from "@/lib/lock";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme";
 import { todayISO } from "@/lib/format";
 import { KeyboardModePanel } from "./KeyboardModePanel";
+import { useUpdateStatus } from "@/lib/updates";
 
 const KEYBOARD_MODE_KEY = "smartbudget.keyboard_mode";
 
@@ -26,6 +28,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const db = useDB();
   const hydrated = useHydrated();
   const unlocked = useUnlocked();
+  // Also runs the daily update check after sign-in.
+  const { status: updateStatus } = useUpdateStatus();
   const { canUndo, canRedo } = useUndo();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [keyboardMode, setKeyboardMode] = useState(false);
@@ -132,15 +136,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <Link to="/" className="flex items-center gap-2.5 px-2 py-1">
-          <span className="num flex h-9 w-9 items-center justify-center rounded-2xl gradient-primary text-primary-foreground">
-            ₹
-          </span>
-          <span className="leading-tight">
-            <span className="block text-[15px] font-bold tracking-tight">SmartBudget</span>
-            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-              Family
-            </span>
-          </span>
+          <LogoMark className="h-9 w-9 text-logo" />
+          <span className="font-display text-[17px] font-bold tracking-tight">SmartBudget</span>
         </Link>
 
         <div className="mt-4" />
@@ -164,6 +161,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <item.icon className="h-[18px] w-[18px]" strokeWidth={2} />
                 {item.label}
+                {item.to === "/settings" && updateStatus?.updateAvailable && (
+                  <span
+                    className="ml-auto h-2 w-2 rounded-full bg-primary"
+                    aria-label="Update available"
+                  />
+                )}
               </Link>
             );
           })}

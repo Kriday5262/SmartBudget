@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 const SESSION_KEY = "smartbudget.lock.session_open";
 const PERSIST_KEY = "smartbudget.lock.open";
@@ -93,7 +93,7 @@ export async function hydrateUsers(): Promise<void> {
     for (const lu of legacy) {
       if (!server.some((u) => u.username.toLowerCase() === lu.username.toLowerCase())) {
         const res = await registerUserApi({
-          data: { name: lu.name, username: lu.username, password: lu.password },
+          data: { name: lu.name, username: lu.username, password: lu.password, startSession: false },
         });
         if (res.ok && res.user) server.push(res.user);
       }
@@ -122,6 +122,44 @@ export function getActiveUser(): UserAccount | null {
   return users.find((u) => u.username === username) ?? null;
 }
 
+/**
+ * Update the signed-in user's own profile (display name and photo).
+ * The username can't be changed. Saves on the server, then refreshes the
+ * local copy and notifies anything using `useActiveUser`.
+ */
+export async function updateProfile(patch: {
+  name?: string;
+  avatarDataUrl?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const active = getActiveUser();
+  if (!active) return { ok: false, error: "You're not signed in." };
+  const { updateUserApi } = await import("./api");
+  const res = await updateUserApi({ data: patch }).catch((err) => {
+    handleAuthError(err);
+    return { ok: false as const, user: undefined };
+  });
+  if (!res.ok || !res.user) return { ok: false, error: "Couldn't save your profile. Try again." };
+  const saved = res.user as UserAccount;
+  saveUsers(
+    getRegisteredUsers().map((u) => (u.username === saved.username ? { ...u, ...saved } : u)),
+  );
+  emitUserChanged();
+  return { ok: true };
+}
+
+/** The signed-in user, re-rendering whenever their profile changes. */
+export function useActiveUser(): UserAccount | null {
+  // Starts null so server and first client render match; filled in after mount.
+  const [user, setUser] = useState<UserAccount | null>(null);
+  useEffect(() => {
+    const refresh = () => setUser(getActiveUser());
+    refresh();
+    window.addEventListener("smartbudget:user-changed", refresh);
+    return () => window.removeEventListener("smartbudget:user-changed", refresh);
+  }, []);
+  return user;
+}
+
 export function getCurrentHomeId(): string {
   if (typeof window === "undefined") return "home-default";
   const persisted = _activeHomeId ?? localStorage.getItem(ACTIVE_HOME_KEY);
@@ -143,7 +181,7 @@ export async function joinUserToHome(
   const active = getActiveUser();
   if (!active) return { ok: false, error: "You are not logged in." };
   const { joinHomeApi } = await import("./api");
-  const res = await joinHomeApi({ data: { code, username: active.username } });
+  const res = await joinHomeApi({ data: { code } });
   if (!res.ok) return { ok: false, error: res.error };
   if (res.homeId) {
     const users = getRegisteredUsers();
@@ -169,12 +207,14 @@ export function hydrateLock() {
 
 export async function unlock(
   password: string,
-  username = "shantanu",
+  username: string,
   remember = false,
-): Promise<{ ok: boolean; needsReset?: boolean }> {
+): Promise<{ ok: boolean; needsReset?: boolean; error?: string }> {
   const { verifyUserApi } = await import("./api");
-  const res = await verifyUserApi({ data: { username, password } });
-  if (!res.ok || !res.user) return { ok: false };
+  const res = await verifyUserApi({ data: { username, password, remember } });
+  if (!res.ok || !("user" in res) || !res.user) {
+    return { ok: false, error: "error" in res ? res.error : undefined };
+  }
 
   const serverUser = res.user;
   const users = getRegisteredUsers();
@@ -214,7 +254,7 @@ export async function registerUser(
     return { ok: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   const { registerUserApi } = await import("./api");
-  const res = await registerUserApi({ data: { name, username, password } });
+  const res = await registerUserApi({ data: { name, username, password, remember } });
   if (!res.ok) return { ok: false, error: res.error ?? "Registration failed" };
 
   if (res.user) {
@@ -241,6 +281,10 @@ export async function registerUser(
 }
 
 export function lock() {
+  // End the server session too (fire-and-forget; the UI locks immediately).
+  import("./api")
+    .then(({ logoutApi }) => logoutApi())
+    .catch(() => {});
   unlocked = false;
   sessionStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(PERSIST_KEY);
@@ -253,8 +297,9 @@ export async function changePassword(current: string, next: string) {
   if (!activeUser) return false;
 
   const { changeUserPasswordApi } = await import("./api");
-  const res = await changeUserPasswordApi({
-    data: { username: activeUser.username, current, next },
+  const res = await changeUserPasswordApi({ data: { current, next } }).catch((err) => {
+    handleAuthError(err);
+    return { ok: false };
   });
   if (res.ok) {
     await hydrateUsers();
@@ -270,6 +315,17 @@ export async function changePassword(current: string, next: string) {
   }
 
   return false;
+}
+
+/**
+ * Call from a server-call `catch`. If the server says the session is missing
+ * or expired, lock the app so the user signs in again. Returns true if it did.
+ */
+export function handleAuthError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  if (!message.includes("UNAUTHORIZED")) return false;
+  if (unlocked) lock();
+  return true;
 }
 
 export function useUnlocked() {

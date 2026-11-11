@@ -2,8 +2,8 @@ const { DatabaseSync } = require("node:sqlite");
 const crypto = require("crypto");
 const fs = require("fs");
 
-const DB_PATH = process.env.DB_PATH || "/home/kriday/smartbudget/data/budget.db";
-const LOG_PATH = process.env.AI_LOG || "/home/kriday/smartbudget/data/ai-log.txt";
+const DB_PATH = process.env.DB_PATH || require("path").join(__dirname, "data", "budget.db");
+const LOG_PATH = process.env.AI_LOG || require("path").join(__dirname, "data", "ai-log.txt");
 const AI_URL = process.env.AI_URL || "https://api.deepseek.com/v1/chat/completions";
 const AI_API_KEY = process.env.AI_API_KEY || "";
 const MODEL = process.env.AI_MODEL || "deepseek-v4-flash";

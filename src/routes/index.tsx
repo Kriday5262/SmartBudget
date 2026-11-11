@@ -12,7 +12,7 @@ import {
   sortedAccounts,
 } from "@/lib/store";
 import { money, monthKey, greeting, prettyDate } from "@/lib/format";
-import { getActiveUser } from "@/lib/lock";
+import { useActiveUser } from "@/lib/lock";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CategoryInline, CategoryList } from "@/lib/category-icons";
 import { PendingBadge } from "@/components/PendingBadge";
@@ -22,16 +22,16 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SmartBudget — Family Budgeting with AI & UPI SmartPay" },
+      { title: "SmartBudget — Give every penny a purpose" },
       {
         name: "description",
         content:
-          "Zero-based family budgeting in rupees: track accounts, assign every rupee, split bills over UPI, and get AI help.",
+          "Zero-based family budgeting: track accounts, give every penny a purpose, split bills, and get AI help.",
       },
-      { property: "og:title", content: "SmartBudget — Family Budgeting with AI & UPI SmartPay" },
+      { property: "og:title", content: "SmartBudget — Give every penny a purpose" },
       {
         property: "og:description",
-        content: "Zero-based family budgeting in rupees with AI assistance and UPI bill splitting.",
+        content: "Zero-based family budgeting with shared households, bill splitting and AI assistance.",
       },
     ],
   }),
@@ -48,6 +48,7 @@ const typeLabel: Record<string, string> = {
 function Dashboard() {
   const db = useDB();
   const hydrated = useHydrated();
+  const me = useActiveUser();
   const navigate = useNavigate();
   const month = monthKey();
 
@@ -79,16 +80,19 @@ function Dashboard() {
             SmartBudget
           </p>
           <h1 className="truncate text-lg font-semibold">
-            {greeting()}, {getActiveUser()?.name ?? "family"}
+            {greeting()}, {me?.name ?? "family"}
           </h1>
         </div>
-        <span className="num flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full gradient-primary text-base font-bold text-primary-foreground shadow-md select-none">
-          {getActiveUser()?.avatarDataUrl ? (
-            <img src={getActiveUser()!.avatarDataUrl} alt="" className="h-full w-full object-cover" />
+        <Link
+          to="/profile"
+          aria-label="Your profile"
+          className="num flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full gradient-primary text-base font-bold text-primary-foreground shadow-md select-none">
+          {me?.avatarDataUrl ? (
+            <img src={me.avatarDataUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            getActiveUser()?.name?.[0] ?? "S"
+            (me?.name?.[0]?.toUpperCase() ?? "S")
           )}
-        </span>
+        </Link>
       </header>
 
       {/* Single-focus hero */}

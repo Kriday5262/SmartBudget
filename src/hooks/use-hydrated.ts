@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 
 /** true after client hydration — use to gate browser-only rendering */
 export function useHydrated() {
-  const [hydrated, setHydrated] = useState(() => typeof window !== "undefined");
+  // Must start false on both server and client so the first client render
+  // matches the server HTML; flip to true only after hydration.
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    if (!hydrated) setHydrated(true);
-  }, [hydrated]);
+    setHydrated(true);
+  }, []);
   return hydrated;
 }

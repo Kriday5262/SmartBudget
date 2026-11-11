@@ -16,9 +16,9 @@ const require = createRequire(import.meta.url);
 // @ts-ignore
 const { DatabaseSync } = require("node:sqlite");
 
-const DATA_DIR =
+export const DATA_DIR =
   process.env.DATA_DIR ||
-  (process.env.DB_PATH ? path.dirname(process.env.DB_PATH) : "/home/kriday/KamkaziBudget/data");
+  (process.env.DB_PATH ? path.dirname(process.env.DB_PATH) : path.join(process.cwd(), "data"));
 const DEFAULT_DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, "budget.db");
 const HOUSE_DIR = path.join(DATA_DIR, "houses");
 
@@ -103,6 +103,19 @@ function kvSet(conn: any, key: string, value: string): void {
   conn.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)").run(key, cipher);
 }
 
+/** Raw encrypted key/value access for one household's file (used by backups). */
+export function homeKvGet(homeId: string, key: string): string | null {
+  return kvGet(getDB(homeId), key);
+}
+
+export function homeKvSet(homeId: string, key: string, value: string): void {
+  kvSet(getDB(homeId), key, value);
+}
+
+export function homeKvDelete(homeId: string, key: string): void {
+  getDB(homeId).prepare("DELETE FROM kv WHERE key = ?").run(key);
+}
+
 export function loadDBValue(homeId = "default"): string | null {
   return kvGet(getDB(homeId), "db");
 }
@@ -173,22 +186,6 @@ export function saveDBValue(json: string, homeId = "default"): void {
   kvSet(getDB(homeId), "db", json);
 }
 
-export function getPasswordHash(homeId = "default"): string | null {
-  return kvGet(getDB(homeId), "password_hash");
-}
-
-export function verifyPasswordServer(password: string, homeId = "default"): boolean {
-  const stored = getPasswordHash(homeId);
-  if (!stored) return false;
-  return verifyPasswordScrypt(password, stored);
-}
-
-export function changePasswordServer(current: string, next: string, homeId = "default"): boolean {
-  const stored = getPasswordHash(homeId);
-  if (!stored || !verifyPasswordScrypt(current, stored)) return false;
-  kvSet(getDB(homeId), "password_hash", hashPasswordScrypt(next));
-  return true;
-}
 
 export type ServerUser = {
   id: string;
@@ -280,21 +277,18 @@ export function loadHomesRegistry(): HomeEntry[] {
       saveHomesRegistry(entries);
     }
   }
-  if (!entries.some((h) => h.id === "home-default")) {
-    const existing = loadDBValue("default");
-    let name = "Shantanu's Home";
+  const existing = entries.some((h) => h.id === "home-default") ? null : loadDBValue("default");
+  if (existing) {
+    // Older installs kept one shared budget here; keep it reachable by code.
+    let name = "Family Home";
     let code = homeCode();
-    if (existing) {
-      try {
-        const parsed = JSON.parse(existing);
-        const first = parsed.households?.[0];
-        if (first) {
-          if (first.name) name = first.name;
-          if (first.code) code = first.code;
-        }
-      } catch {}
-    }
-    entries.unshift({ id: "home-default", name, code, owner: "shantanu" });
+    try {
+      const parsed = JSON.parse(existing);
+      const first = parsed.households?.[0];
+      if (first?.name) name = first.name;
+      if (first?.code) code = first.code;
+    } catch {}
+    entries.unshift({ id: "home-default", name, code, owner: "" });
     saveHomesRegistry(entries);
   }
   return entries;
@@ -378,10 +372,15 @@ export function joinHomeServer(
   return { ok: true, homeId: entry.id, name: entry.name };
 }
 
-function ensureUserHome(user: ServerUser): boolean {
+function ensureUserHome(user: ServerUser, all: ServerUser[]): boolean {
   if (user.homeId && Array.isArray(user.homes)) return false;
   if (!user.homeId) {
-    if (user.username.toLowerCase() === "shantanu") {
+    // An older account from before households existed takes over the original
+    // shared budget, if that budget exists and nobody else has it yet.
+    const legacyUnclaimed =
+      loadDBValue("default") != null &&
+      !all.some((u) => u !== user && (u.homeId === "home-default" || u.homes?.includes("home-default")));
+    if (legacyUnclaimed) {
       user.homeId = "home-default";
       user.homes = ["home-default"];
     } else {
@@ -424,25 +423,15 @@ export function loadUsersServer(homeId = "default"): ServerUser[] {
       if (Array.isArray(parsed) && parsed.length > 0) {
         let changed = false;
         for (const u of parsed) {
-          if (ensureUserHome(u)) changed = true;
+          if (ensureUserHome(u, parsed)) changed = true;
         }
         if (changed) saveUsersServer(parsed, homeId);
         return parsed;
       }
     } catch {}
   }
-  const masterHash = getPasswordHash("default") ?? hashUserPassword("SmartHome@2012");
-  const defaultUser: ServerUser = {
-    id: "usr-shantanu",
-    name: "Shantanu",
-    username: "shantanu",
-    passwordHash: masterHash,
-    createdAt: today(),
-    homeId: "home-default",
-    homes: ["home-default"],
-  };
-  saveUsersServer([defaultUser], homeId);
-  return [defaultUser];
+  // No built-in account: the first person to sign up creates the first user.
+  return [];
 }
 
 export function registerUserServer(
@@ -584,10 +573,11 @@ function pruneExpired(sessions: StoredSession[]): StoredSession[] {
 export function createSessionServer(
   username: string,
   homes: string[],
+  lifetimeMs: number = SESSION_LIFETIME_MS,
 ): { token: string; expiresAt: number } {
   const token = generateSessionToken();
   const now = Date.now();
-  const expiresAt = now + SESSION_LIFETIME_MS;
+  const expiresAt = now + lifetimeMs;
   const sessions = pruneExpired(loadSessions());
   sessions.push({
     username,

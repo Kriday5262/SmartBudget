@@ -62,7 +62,10 @@ remove_updater() {
 }
 
 run_container() {
+  # Run as the user who owns the data dir, so files the app creates stay
+  # readable by this account (and by scripts/updater.sh's cron backup).
   docker run -d --name smartbudget --restart unless-stopped -p 9119:9119 \
+    --user "$(id -u):$(id -g)" \
     -e DB_PATH=/data/budget.db -e DATA_DIR=/data "${ENC_KEY_ARGS[@]}" \
     -v "$APP_DIR/data:/data" smartbudget
 }

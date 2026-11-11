@@ -58,7 +58,10 @@ trap 'rm -f "$UPDATER_DIR/request.processing.json"' EXIT
 trap 'status failed "Something went wrong during the update (details in updater.log). Your data is backed up in $BACKUP_DIR."' ERR
 cd "$APP_DIR"
 
+# Run as the user who owns the data dir, so files the app creates stay
+# readable by this account (and by this cron backup tar).
 container_args=(-d --name "$CONTAINER" --restart unless-stopped -p "$PORT:$PORT"
+  --user "$(id -u):$(id -g)"
   -e DB_PATH=/data/budget.db -e DATA_DIR=/data -v "$DATA_DIR:/data")
 if [ -f "$ENC_KEY_FILE" ]; then
   container_args+=(-e "SMARTBUDGET_ENC_KEY=$(cat "$ENC_KEY_FILE")")

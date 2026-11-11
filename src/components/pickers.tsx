@@ -377,7 +377,20 @@ export type PersonOption = {
   kind: "Payee" | "Account" | "Category";
 };
 
-export function personOptions(db: DB, filter?: "all" | "accountsWithUpi"): PersonOption[] {
+export function personOptions(
+  db: DB,
+  filter?: "all" | "accounts" | "accountsWithUpi",
+): PersonOption[] {
+  if (filter === "accounts") {
+    return db.accounts
+      .filter((a) => !a.closed)
+      .map((a) => ({
+        key: `account:${a.id}`,
+        name: a.name,
+        upi: a.upiVpa,
+        kind: "Account" as const,
+      }));
+  }
   if (filter === "accountsWithUpi") {
     return db.accounts
       .filter((a) => a.upiVpa?.trim())
@@ -423,7 +436,7 @@ export function PersonPicker({
   onChange: (sel: PersonOption) => void;
   placeholder?: string;
   excludeKeys?: string[];
-  filter?: "all" | "accountsWithUpi";
+  filter?: "all" | "accounts" | "accountsWithUpi";
 }) {
   const db = useDB();
   const [open, setOpen] = useState(false);
@@ -432,7 +445,10 @@ export function PersonPicker({
 
   const excluded = new Set(excludeKeys);
   const options: PersonOption[] = personOptions(db, filter);
-  const selected = options.find((o) => o.key === value);
+  // Still show an earlier choice that this filter no longer offers (e.g. an old split's payee).
+  const selected =
+    options.find((o) => o.key === value) ??
+    (value ? personOptions(db, "all").find((o) => o.key === value) : undefined);
   const q = query.trim().toLowerCase();
   const list = options.filter(
     (o) =>

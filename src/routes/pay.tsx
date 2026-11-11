@@ -374,7 +374,13 @@ function PayPage() {
               <div className="space-y-2">
                 {validSettlements.map((s, i) => {
                   const link = s.toUpi
-                    ? upiLink(s.toUpi, s.toName, s.amount, `SmartPay: ${s.fromName} to ${s.toName}`, db)
+                    ? upiLink(
+                        s.toUpi,
+                        s.toName,
+                        s.amount,
+                        `SmartPay: ${s.fromName} to ${s.toName}`,
+                        db,
+                      )
                     : "";
                   return (
                     <div
@@ -922,11 +928,11 @@ function SplitForm({
           </button>
         </div>
 
-        {db.payees.length === 0 && db.accounts.length === 0 && (
+        {db.accounts.every((a) => a.closed) && (
           <p className="text-xs text-muted-foreground">
-            No payees or accounts yet — add them under{" "}
-            <Link to="/settings" className="font-bold text-primary">
-              Settings › Payees &amp; UPI
+            No accounts yet — add them under{" "}
+            <Link to="/accounts" className="font-bold text-primary">
+              Accounts
             </Link>
             .
           </p>
@@ -945,6 +951,7 @@ function SplitForm({
                 <div className="flex-1">
                   <PersonPicker
                     value={p.key}
+                    filter="accounts"
                     onChange={(sel) => setPerson(i, { key: sel.key, name: sel.name, upi: sel.upi })}
                     excludeKeys={[...taken]}
                   />

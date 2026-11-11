@@ -93,7 +93,12 @@ export async function hydrateUsers(): Promise<void> {
     for (const lu of legacy) {
       if (!server.some((u) => u.username.toLowerCase() === lu.username.toLowerCase())) {
         const res = await registerUserApi({
-          data: { name: lu.name, username: lu.username, password: lu.password, startSession: false },
+          data: {
+            name: lu.name,
+            username: lu.username,
+            password: lu.password,
+            startSession: false,
+          },
         });
         if (res.ok && res.user) server.push(res.user);
       }
@@ -145,6 +150,18 @@ export async function updateProfile(patch: {
   );
   emitUserChanged();
   return { ok: true };
+}
+
+/**
+ * Apply a change to the signed-in user's locally cached account straight away,
+ * so the app never reads back an older value while the server save is in flight.
+ */
+export function patchActiveUserLocal(patch: Partial<UserAccount>): void {
+  const active = getActiveUser();
+  if (!active) return;
+  saveUsers(
+    getRegisteredUsers().map((u) => (u.username === active.username ? { ...u, ...patch } : u)),
+  );
 }
 
 /** The signed-in user, re-rendering whenever their profile changes. */
@@ -282,9 +299,7 @@ export async function registerUser(
 
 export function lock() {
   // End the server session too (fire-and-forget; the UI locks immediately).
-  import("./api")
-    .then(({ logoutApi }) => logoutApi())
-    .catch(() => {});
+  import("./api").then(({ logoutApi }) => logoutApi()).catch(() => {});
   unlocked = false;
   sessionStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(PERSIST_KEY);

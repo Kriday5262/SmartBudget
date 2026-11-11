@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getActiveUser } from "./lock";
+import { getActiveUser, patchActiveUserLocal } from "./lock";
 
 const KEY = "smartbudget.theme";
 const PRESET_KEY = "smartbudget.theme.preset";
@@ -63,6 +63,12 @@ function readTheme() {
 function saveTheme(next: Partial<{ mode: Mode; preset: ThemePreset; customHex: string }>) {
   const user = getActiveUser();
   if (!user) return;
+  // Update the local copy first: re-reading the account must never bring back the old theme.
+  patchActiveUserLocal({
+    ...(next.mode ? { themeMode: next.mode } : {}),
+    ...(next.preset ? { themePreset: next.preset } : {}),
+    ...(next.customHex ? { themeCustomHex: next.customHex } : {}),
+  });
   import("./api").then(({ updateUserApi }) =>
     updateUserApi({ data: { themeMode: next.mode, themePreset: next.preset, themeCustomHex: next.customHex } }).catch(() => {}),
   );

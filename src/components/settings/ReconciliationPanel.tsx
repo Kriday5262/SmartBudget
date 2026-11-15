@@ -10,7 +10,14 @@ import {
   Row,
   TextField,
 } from "@/components/MaterialList";
-import { useDB, addReconLink, updateReconLink, removeReconLink, type ReconLink } from "@/lib/store";
+import {
+  useDB,
+  addReconLink,
+  updateReconLink,
+  removeReconLink,
+  sortedAccounts,
+  type ReconLink,
+} from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 /** A tappable checkbox chip for the multi-selects. */
@@ -65,7 +72,8 @@ function LinkForm({
       : EMPTY_DRAFT,
   );
 
-  const accounts = db.accounts.filter((a) => !a.closed).sort((a, b) => a.sortOrder - b.sortOrder);
+  // Same order as the Accounts and Budget screens.
+  const accounts = sortedAccounts(db);
   const groups = db.categoryGroups
     .filter((g) => !g.hidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -141,8 +149,20 @@ export function ReconciliationPanel() {
   // null = nothing open, "new" = add form, otherwise the id being edited.
   const [editing, setEditing] = useState<null | "new" | string>(null);
 
-  const accountName = (id: string) => db.accounts.find((a) => a.id === id)?.name;
-  const groupName = (id: string) => db.categoryGroups.find((g) => g.id === id)?.name;
+  // Names listed in the same order as the Accounts and Budget screens.
+  const accountNames = (ids: string[]) => {
+    const set = new Set(ids);
+    return sortedAccounts(db, { includeClosed: true })
+      .filter((a) => set.has(a.id))
+      .map((a) => a.name);
+  };
+  const groupNames = (ids: string[]) => {
+    const set = new Set(ids);
+    return [...db.categoryGroups]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .filter((g) => set.has(g.id))
+      .map((g) => g.name);
+  };
 
   return (
     <>
@@ -175,8 +195,8 @@ export function ReconciliationPanel() {
               }
               title={link.label}
               summary={[
-                link.accountIds.map(accountName).filter(Boolean).join(", ") || "No accounts",
-                link.groupIds.map(groupName).filter(Boolean).join(", ") || "No groups",
+                accountNames(link.accountIds).join(", ") || "No accounts",
+                groupNames(link.groupIds).join(", ") || "No groups",
               ].join(" ↔ ")}
               onClick={() => setEditing(link.id)}
               trailing={

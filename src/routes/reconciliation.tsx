@@ -1,7 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Scale, Settings2 } from "lucide-react";
 
-import { useDB, accountBalance, categoryAvailable, type CategoryGroup, type DB } from "@/lib/store";
+import {
+  useDB,
+  accountBalance,
+  categoryAvailable,
+  sortedAccounts,
+  type CategoryGroup,
+  type DB,
+} from "@/lib/store";
 import { money, monthKey } from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
@@ -41,15 +48,18 @@ function ReconciliationPage() {
 
   const links = db.reconLinks ?? [];
 
+  // Order accounts and groups the same way the Accounts and Budget screens do,
+  // regardless of the order they were picked in.
+  const orderedAccounts = sortedAccounts(db, { includeClosed: true });
+  const orderedGroups = [...db.categoryGroups].sort((a, b) => a.sortOrder - b.sortOrder);
+
   // Resolve each mapping to its live accounts and groups, dropping any that were
   // deleted since the mapping was made.
   const rows = links.map((link) => {
-    const accounts = link.accountIds
-      .map((id) => db.accounts.find((a) => a.id === id))
-      .filter((a): a is NonNullable<typeof a> => !!a);
-    const groups = link.groupIds
-      .map((id) => db.categoryGroups.find((g) => g.id === id))
-      .filter((g): g is CategoryGroup => !!g);
+    const accountIds = new Set(link.accountIds);
+    const groupIds = new Set(link.groupIds);
+    const accounts = orderedAccounts.filter((a) => accountIds.has(a.id));
+    const groups = orderedGroups.filter((g) => groupIds.has(g.id));
 
     const accountTotal = accounts.reduce((s, a) => s + accountBalance(db, a.id).total, 0);
     const groupTotal = groups.reduce((s, g) => s + groupAllocation(db, g, month), 0);

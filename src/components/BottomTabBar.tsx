@@ -16,6 +16,7 @@ import {
   Undo2,
   Redo2,
   Scale,
+  HelpCircle,
 } from "lucide-react";
 import { useUI, uiActions, type AddTab } from "@/lib/ui-store";
 import { useUndo, undo, redo } from "@/lib/store";
@@ -30,6 +31,7 @@ export const NAV_ITEMS = [
   { to: "/pay", label: "Pay", icon: Split },
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/reconciliation", label: "Reconciliation", icon: Scale },
+  { to: "/help", label: "Help", icon: HelpCircle },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

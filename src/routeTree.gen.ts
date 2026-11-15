@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as GoalsRouteImport } from './routes/goals'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoansRouteImport } from './routes/loans'
 import { Route as PayRouteImport } from './routes/pay'
@@ -36,6 +37,11 @@ const BudgetRoute = BudgetRouteImport.update({
 const GoalsRoute = GoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/loans': typeof LoansRoute
   '/pay': typeof PayRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/'
     | '/budget'
     | '/goals'
+    | '/help'
     | '/history'
     | '/loans'
     | '/pay'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/budget'
     | '/goals'
+    | '/help'
     | '/history'
     | '/loans'
     | '/pay'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/budget'
     | '/goals'
+    | '/help'
     | '/history'
     | '/loans'
     | '/pay'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BudgetRoute: typeof BudgetRoute
   GoalsRoute: typeof GoalsRoute
+  HelpRoute: typeof HelpRoute
   HistoryRoute: typeof HistoryRoute
   LoansRoute: typeof LoansRoute
   PayRoute: typeof PayRoute
@@ -220,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/goals'
       fullPath: '/goals'
       preLoaderRoute: typeof GoalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -299,6 +319,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BudgetRoute: BudgetRoute,
   GoalsRoute: GoalsRoute,
+  HelpRoute: HelpRoute,
   HistoryRoute: HistoryRoute,
   LoansRoute: LoansRoute,
   PayRoute: PayRoute,

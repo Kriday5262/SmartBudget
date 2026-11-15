@@ -176,6 +176,19 @@ export type Household = {
   members: HomeMember[];
 };
 
+/**
+ * A reconciliation mapping: a named link between a set of accounts and a set of
+ * budget (category) groups. The reconciliation screen sums the chosen accounts
+ * and the chosen groups' available balances and reports the difference, which
+ * should be zero when everything is accounted for.
+ */
+export type ReconLink = {
+  id: string;
+  label: string;
+  accountIds: string[];
+  groupIds: string[];
+};
+
 export type DB = {
   accounts: Account[];
   categoryGroups: CategoryGroup[];
@@ -189,6 +202,8 @@ export type DB = {
   settings: Record<string, string>;
   households?: Household[];
   activeHomeId?: string;
+  /** user-defined account ↔ budget-group mappings for the reconciliation screen */
+  reconLinks?: ReconLink[];
 };
 
 export const uid = () =>
@@ -212,6 +227,7 @@ function seed(): DB {
     splits: [],
     loans: [],
     settings: { payLinkBase: "" },
+    reconLinks: [],
   };
 }
 
@@ -332,6 +348,7 @@ function load(): DB {
     if (!db.goals) db.goals = [];
     if (!db.splits) db.splits = [];
     if (!db.loans) db.loans = [];
+    if (!db.reconLinks) db.reconLinks = [];
     if (!db.settings) db.settings = {};
     return db;
   }
@@ -1098,6 +1115,30 @@ export function toggleShareSettled(splitId: string, shareId: string) {
 
 export function setSetting(key: string, value: string) {
   mutate((d) => (d.settings[key] = value));
+}
+
+/* ---------- reconciliation mappings ---------- */
+
+export function addReconLink(input: { label: string; accountIds: string[]; groupIds: string[] }) {
+  const id = uid();
+  mutate((d) => {
+    if (!d.reconLinks) d.reconLinks = [];
+    d.reconLinks.push({ id, ...input });
+  });
+  return id;
+}
+
+export function updateReconLink(id: string, patch: Partial<Omit<ReconLink, "id">>) {
+  mutate((d) => {
+    const link = d.reconLinks?.find((x) => x.id === id);
+    if (link) Object.assign(link, patch);
+  });
+}
+
+export function removeReconLink(id: string) {
+  mutate((d) => {
+    if (d.reconLinks) d.reconLinks = d.reconLinks.filter((x) => x.id !== id);
+  });
 }
 
 export function dismissedSplitTxnIds(): string[] {

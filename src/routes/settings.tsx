@@ -19,6 +19,7 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  Scale,
   Search,
   Share2,
   ShieldCheck,
@@ -68,6 +69,7 @@ import {
 import { useTheme, THEME_PRESETS } from "@/lib/theme";
 import { useUpdateStatus } from "@/lib/updates";
 import { BackupsPanel } from "@/components/settings/BackupsPanel";
+import { ReconciliationPanel } from "@/components/settings/ReconciliationPanel";
 import { UpdatePanel } from "@/components/settings/UpdatePanel";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
@@ -86,6 +88,7 @@ const SECTIONS = [
   "security",
   "homes",
   "payees",
+  "reconciliation",
   "backups",
   "update",
   "shortcuts",
@@ -286,6 +289,17 @@ export function SettingsPage() {
       action: () => open("payees"),
     },
     {
+      id: "reconciliation",
+      group: 1,
+      icon: Scale,
+      title: "Reconciliation",
+      summary: db.reconLinks?.length
+        ? `${db.reconLinks.length} ${db.reconLinks.length === 1 ? "mapping" : "mappings"}`
+        : "Map accounts to budget groups",
+      keywords: "reconcile reconciliation map accounts budget groups envelopes balance match",
+      action: () => open("reconciliation"),
+    },
+    {
       id: "backups",
       group: 2,
       icon: Database,
@@ -334,6 +348,7 @@ export function SettingsPage() {
     security: "Security",
     homes: "Households",
     payees: "Payees",
+    reconciliation: "Reconciliation",
     backups: "Backups",
     update: "Software update",
     shortcuts: "Keyboard shortcuts",
@@ -834,6 +849,8 @@ export function SettingsPage() {
               </Group>
             </>
           )}
+
+          {page === "reconciliation" && <ReconciliationPanel />}
 
           {page === "update" && <UpdatePanel />}
 

@@ -951,7 +951,7 @@ function SplitForm({
                 <div className="flex-1">
                   <PersonPicker
                     value={p.key}
-                    filter="accounts"
+                    filter="accountsWithUpi"
                     onChange={(sel) => setPerson(i, { key: sel.key, name: sel.name, upi: sel.upi })}
                     excludeKeys={[...taken]}
                   />

@@ -10,7 +10,7 @@ import {
   Database,
   Download,
   Home,
-  Keyboard,
+  HelpCircle,
   KeyRound,
   Lock as LockIcon,
   Monitor,
@@ -91,7 +91,6 @@ const SECTIONS = [
   "reconciliation",
   "backups",
   "update",
-  "shortcuts",
 ] as const;
 
 export const Route = createFileRoute("/settings")({
@@ -114,16 +113,6 @@ export const Route = createFileRoute("/settings")({
 });
 
 type Page = "main" | (typeof SECTIONS)[number];
-
-const SHORTCUTS = [
-  ["Shift + L", "Add transaction"],
-  ["⌘ / Ctrl + Z", "Undo last change"],
-  ["⌘ / Ctrl + ⇧ + Z", "Redo change"],
-  ["⌘ / Ctrl + ⇧ + A", "Add account"],
-  ["⌘ / Ctrl + ⇧ + C", "Add credit card"],
-  ["⌘ / Ctrl + ⇧ + G", "Add goal"],
-  ["Esc", "Close any popup"],
-];
 
 /* ── Page ────────────────────────────────────────────────────────── */
 
@@ -309,13 +298,13 @@ export function SettingsPage() {
       action: () => open("backups"),
     },
     {
-      id: "shortcuts",
+      id: "help",
       group: 2,
-      icon: Keyboard,
-      title: "Keyboard shortcuts",
-      summary: "Undo, add transaction and more",
-      keywords: "keys hotkeys",
-      action: () => open("shortcuts"),
+      icon: HelpCircle,
+      title: "Help",
+      summary: "How every feature works, and keyboard shortcuts",
+      keywords: "help guide how to keyboard shortcuts keys hotkeys support",
+      action: () => navigate({ to: "/help" }),
     },
     {
       id: "update",
@@ -351,7 +340,6 @@ export function SettingsPage() {
     reconciliation: "Reconciliation",
     backups: "Backups",
     update: "Software update",
-    shortcuts: "Keyboard shortcuts",
   };
 
   return (
@@ -894,25 +882,6 @@ export function SettingsPage() {
                   summary="Clear everything stored in this browser"
                   onClick={() => setConfirmReset(true)}
                 />
-              </Group>
-            </>
-          )}
-
-          {page === "shortcuts" && (
-            <>
-              <Category>Shortcuts</Category>
-              <Group>
-                {SHORTCUTS.map(([keys, what]) => (
-                  <Row
-                    key={keys}
-                    title={what}
-                    trailing={
-                      <kbd className="num shrink-0 rounded-lg bg-muted px-2.5 py-1 text-xs font-semibold text-foreground">
-                        {keys}
-                      </kbd>
-                    }
-                  />
-                ))}
               </Group>
             </>
           )}

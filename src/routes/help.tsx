@@ -86,7 +86,7 @@ function HelpPage() {
           className="flex gap-2 overflow-x-auto pb-1 no-scrollbar md:flex-col md:gap-1 md:overflow-visible md:pb-0"
         >
           {HELP.map((x) => {
-            const active = !q && x.id === section.id;
+            const active = !q && x.id === sectionId;
             const Icon = x.icon;
             return (
               <button

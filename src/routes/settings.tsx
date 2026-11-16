@@ -61,6 +61,7 @@ import {
   getActiveHousehold,
   switchHousehold,
   useSwitchingHome,
+  memberUsername,
   type DB,
 } from "@/lib/store";
 import { useTheme, THEME_PRESETS } from "@/lib/theme";
@@ -664,8 +665,10 @@ export function SettingsPage() {
                     title={m.name}
                     summary={[
                       m.role === "owner" ? "Owner" : "Member",
-                      m.username ? `@${m.username}` : "No login yet",
-                    ].join(" · ")}
+                      memberUsername(m, activeHome.id) && `@${memberUsername(m, activeHome.id)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   />
                 ))}
                 {adding === "member" ? (

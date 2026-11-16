@@ -12,6 +12,7 @@ import {
   renameHousehold,
   createHousehold,
   setSetting,
+  memberUsername,
 } from "@/lib/store";
 import { getActiveUser } from "@/lib/lock";
 import { useTheme } from "@/lib/theme";
@@ -386,7 +387,10 @@ function MembersStep() {
               </span>
             }
             title={m.name}
-            summary={[m.role === "owner" ? "Owner" : "Member", m.username && `@${m.username}`]
+            summary={[
+              m.role === "owner" ? "Owner" : "Member",
+              memberUsername(m, home.id) && `@${memberUsername(m, home.id)}`,
+            ]
               .filter(Boolean)
               .join(" · ")}
           />

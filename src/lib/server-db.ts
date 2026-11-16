@@ -229,7 +229,13 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function freshHomeJSON(homeId: string, name: string, ownerName: string, code: string): string {
+function freshHomeJSON(
+  homeId: string,
+  name: string,
+  ownerName: string,
+  code: string,
+  ownerUsername?: string,
+): string {
   const home: any = {
     id: homeId,
     name,
@@ -240,6 +246,7 @@ function freshHomeJSON(homeId: string, name: string, ownerName: string, code: st
       {
         id: "mem-" + uidServer(),
         name: ownerName || "Owner",
+        username: ownerUsername,
         role: "owner",
         joinedAt: today(),
       },
@@ -316,7 +323,7 @@ export function provisionHomeServer(
     return { ok: false, id: "", name: "", code: "", error: "Invalid home id." };
   }
   const code = homeCode();
-  saveDBValue(freshHomeJSON(cleanId, name, ownerName, code), cleanId);
+  saveDBValue(freshHomeJSON(cleanId, name, ownerName, code, ownerUsername), cleanId);
   const entries = loadHomesRegistry();
   if (!entries.some((h) => h.id === cleanId)) {
     entries.push({ id: cleanId, name, code, owner: ownerUsername });
@@ -383,6 +390,7 @@ export function joinHomeServer(
           home.members.push({
             id: "mem-" + uidServer(),
             name: me.name,
+            username: me.username,
             role: "editor",
             joinedAt: today(),
           });

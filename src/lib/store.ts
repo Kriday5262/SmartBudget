@@ -1581,6 +1581,22 @@ export async function addHomeMemberAccount(input: {
   }
 }
 
+/**
+ * The login (username) behind a household member, if they have one. Newer
+ * member records store it; older ones (people who joined with an invite code,
+ * the owner) are matched by name against the logins that share this household.
+ */
+export function memberUsername(m: HomeMember, homeId: string): string | undefined {
+  if (m.username) return m.username;
+  const name = m.name.trim().toLowerCase();
+  const u = getRegisteredUsers().find(
+    (x) =>
+      x.name.trim().toLowerCase() === name &&
+      (x.homeId === homeId || (x.homes ?? []).includes(homeId)),
+  );
+  return u?.username;
+}
+
 /** Rename the current household, here and on the server. */
 export async function renameHousehold(name: string): Promise<boolean> {
   const clean = name.trim();

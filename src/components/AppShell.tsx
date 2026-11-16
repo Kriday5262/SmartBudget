@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Plus, Undo2, Redo2, Lock } from "lucide-react";
+import { Plus, Undo2, Redo2, Lock, ChevronDown } from "lucide-react";
+import { BankMark } from "./BankMark";
+import { CardBrandMark } from "./CardBrandMark";
 import { NAV_ITEMS, BottomTabBar } from "./BottomTabBar";
 import { AddPopup } from "./AddPopup";
 import { EditAccountDialog } from "./EditAccountDialog";
@@ -9,7 +11,17 @@ import { JoinHomeInvitePopup } from "./JoinHomeInvitePopup";
 import { PullToRefresh } from "./PullToRefresh";
 
 import { Toaster } from "@/components/ui/sonner";
-import { useDB, accountBalance, initDB, refreshDB, useUndo, undo, redo } from "@/lib/store";
+import {
+  useDB,
+  accountBalance,
+  initDB,
+  refreshDB,
+  useUndo,
+  undo,
+  redo,
+  ACCOUNT_TYPES,
+  type AccountType,
+} from "@/lib/store";
 import { money } from "@/lib/format";
 import { uiActions } from "@/lib/ui-store";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -172,58 +184,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-2 flex-1 overflow-y-auto no-scrollbar">
-          {hydrated &&
-            [
-              { label: "Accounts", type: "account" as const },
-              { label: "Credit Cards", type: "credit" as const },
-              { label: "Fixed Deposits", type: "fd" as const },
-              { label: "Recurring Deposits", type: "rd" as const },
-            ].map((group) => {
-              const accts = db.accounts
-                .filter((a) => a.type === group.type && !a.closed)
-                .sort((a, b) => a.sortOrder - b.sortOrder);
-              if (accts.length === 0) return null;
-              return (
-                <div key={group.type} className="mb-2">
-                  <p className="px-3 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                    {group.label}
-                  </p>
-                  <div className="space-y-0.5">
-                    {accts.map((a) => {
-                      const bal = accountBalance(db, a.id).total;
-                      const active = pathname === `/accounts/${a.id}`;
-                      return (
-                        <Link
-                          key={a.id}
-                          to="/accounts/$accountId"
-                          params={{ accountId: a.id }}
-                          className={cn(
-                            "flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-sm hover:bg-sidebar-accent",
-                            active && "bg-primary/10",
-                          )}
-                        >
-                          <span className="truncate text-sidebar-foreground">{a.name}</span>
-                          <span
-                            className={cn(
-                              "num text-xs font-semibold",
-                              active
-                                ? "text-primary"
-                                : bal < 0
-                                  ? "text-destructive"
-                                  : "text-muted-foreground",
-                            )}
-                          >
-                            {money(bal)}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-        </div>
+        <div className="mt-3" />
+        {hydrated ? <SidebarAccounts pathname={pathname} /> : <div className="flex-1" />}
 
         <div className="mt-3 flex items-center gap-2">
           <button
@@ -279,6 +241,159 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <EditTransactionDialog />
       <JoinHomeInvitePopup />
       <Toaster position="top-center" richColors />
+    </div>
+  );
+}
+
+const SIDEBAR_COLLAPSED_KEY = "smartbudget.sidebar_collapsed_groups";
+
+/** ₹1,03,830 — whole rupees, so names get the room in the narrow sidebar. */
+const inrWhole = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
+
+/** Accounts grouped by type, with collapsible sections and per-group totals. */
+function SidebarAccounts({ pathname }: { pathname: string }) {
+  const db = useDB();
+  const [collapsed, setCollapsed] = useState<Set<AccountType>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) ?? "[]"));
+    } catch {
+      return new Set();
+    }
+  });
+
+  function toggle(type: AccountType) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify([...next]));
+      } catch {
+        // storage unavailable (private mode) — the toggle still works for this visit
+      }
+      return next;
+    });
+  }
+
+  const groups = ACCOUNT_TYPES.map((t) => {
+    const accounts = db.accounts
+      .filter((a) => a.type === t.id && !a.closed)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((a) => ({ account: a, balance: accountBalance(db, a.id).total }));
+    return { ...t, accounts, total: accounts.reduce((s, a) => s + a.balance, 0) };
+  }).filter((g) => g.accounts.length > 0);
+
+  return (
+    <div
+      className={cn(
+        "-mx-1 flex-1 overflow-y-auto px-1 pb-3 pt-3 no-scrollbar",
+        // soft edges instead of a hard cut where the list scrolls
+        "[mask-image:linear-gradient(to_bottom,transparent,black_12px,black_calc(100%-20px),transparent)]",
+      )}
+    >
+      {groups.length === 0 && (
+        <Link
+          to="/accounts"
+          className="mx-1 flex items-center gap-2 rounded-xl border border-dashed border-sidebar-border px-3 py-3 text-xs text-muted-foreground hover:bg-sidebar-accent"
+        >
+          <Plus className="h-3.5 w-3.5" /> Add your first account
+        </Link>
+      )}
+      <div className="space-y-2">
+        {groups.map((g) => {
+          const isOpen = !collapsed.has(g.id);
+          return (
+            <section key={g.id}>
+              <button
+                type="button"
+                onClick={() => toggle(g.id)}
+                aria-expanded={isOpen}
+                className="group flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left hover:bg-sidebar-accent"
+              >
+                <ChevronDown
+                  className={cn(
+                    "h-3 w-3 shrink-0 text-muted-foreground transition-transform",
+                    !isOpen && "-rotate-90",
+                  )}
+                />
+                <span className="flex-1 truncate text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  {g.plural}
+                </span>
+                <span
+                  className={cn(
+                    "num text-[11px] font-semibold",
+                    g.total < 0 ? "text-destructive/80" : "text-muted-foreground",
+                  )}
+                  title={money(g.total)}
+                >
+                  {inrWhole.format(g.total)}
+                </span>
+              </button>
+
+              {isOpen && (
+                <ul className="mt-0.5 space-y-px">
+                  {g.accounts.map(({ account: a, balance }) => {
+                    const active = pathname === `/accounts/${a.id}`;
+                    return (
+                      <li key={a.id}>
+                        <Link
+                          to="/accounts/$accountId"
+                          params={{ accountId: a.id }}
+                          title={`${a.name} · ${money(balance)}`}
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors",
+                            active
+                              ? balance < 0
+                                ? "bg-destructive/10"
+                                : "bg-primary/10"
+                              : "hover:bg-sidebar-accent",
+                          )}
+                        >
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+                            {a.type === "credit" && a.brand ? (
+                              <CardBrandMark brand={a.brand} className="h-4 w-6" />
+                            ) : (
+                              <BankMark bank={a.bank} className="h-[18px] w-[18px]" />
+                            )}
+                          </span>
+                          <span
+                            className={cn(
+                              "min-w-0 flex-1 truncate text-[13px] font-medium",
+                              active
+                                ? balance < 0
+                                  ? "text-destructive"
+                                  : "text-primary"
+                                : "text-sidebar-foreground",
+                            )}
+                          >
+                            {a.name}
+                          </span>
+                          <span
+                            className={cn(
+                              "num shrink-0 text-xs font-semibold tabular-nums",
+                              balance < 0
+                                ? "text-destructive"
+                                : active
+                                  ? "text-primary"
+                                  : "text-muted-foreground",
+                            )}
+                          >
+                            {inrWhole.format(balance)}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

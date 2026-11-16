@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useUI, uiActions } from "@/lib/ui-store";
-import { SearchSelect, UpiPicker } from "@/components/pickers";
+import { SearchSelect, UpiPicker, DatePicker } from "@/components/pickers";
 import {
   useDB,
   updateAccount,
@@ -196,11 +196,12 @@ function Form({ id }: { id: string }) {
       {isDeposit && (
         <div className="space-y-4">
           <Field label="Maturity date">
-            <Input
-              type="date"
+            <DatePicker
               value={maturityDate}
-              onChange={(e) => setMaturityDate(e.target.value)}
-              className="w-full"
+              onChange={setMaturityDate}
+              title="Maturity date"
+              placeholder="Optional"
+              clearable
             />
           </Field>
           <Field label="Rate of interest (% p.a.)">

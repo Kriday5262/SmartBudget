@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Field, AccountPicker, CategoryPicker, SearchSelect } from "@/components/pickers";
+import {
+  Field,
+  AccountPicker,
+  CategoryPicker,
+  SearchSelect,
+  DatePicker,
+} from "@/components/pickers";
 import { useUI, uiActions, type AddTab } from "@/lib/ui-store";
 import {
   useDB,
@@ -363,14 +369,7 @@ function TransactionForm({
       )}
 
       <Field label="Date">
-        <span className="block w-28 shrink-0">
-          <Input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full"
-          />
-        </span>
+        <DatePicker value={date} onChange={setDate} title="Date" />
       </Field>
       <Field label="Memo">
         <Input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="Optional" />
@@ -464,11 +463,12 @@ function AccountForm({ onSaved }: { onSaved: (m: string) => void }) {
       {isDeposit && (
         <div className="space-y-4">
           <Field label="Maturity date">
-            <Input
-              type="date"
+            <DatePicker
               value={maturityDate}
-              onChange={(e) => setMaturityDate(e.target.value)}
-              className="w-full"
+              onChange={setMaturityDate}
+              title="Maturity date"
+              placeholder="Optional"
+              clearable
             />
           </Field>
           <Field label="Rate of interest (% p.a.)" error={errors.rate}>
@@ -624,11 +624,12 @@ function GoalForm({ onSaved }: { onSaved: (m: string) => void }) {
         />
       </Field>
       <Field label="Target date">
-        <Input
-          type="date"
+        <DatePicker
           value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-28 shrink-0"
+          onChange={setDate}
+          title="Target date"
+          placeholder="Optional"
+          clearable
         />
       </Field>
       <Button className="h-11 w-full rounded-xl font-bold" onClick={submit}>

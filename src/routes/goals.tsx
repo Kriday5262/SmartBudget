@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Plus, Target, Trash2, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/pickers";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -165,7 +166,13 @@ function GoalForm({ goal, onClose }: { goal: Goal; onClose: () => void }) {
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-medium text-muted-foreground">Target date</Label>
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <DatePicker
+          value={date}
+          onChange={setDate}
+          title="Target date"
+          placeholder="Optional"
+          clearable
+        />
       </div>
 
       <div className="space-y-1.5 rounded-2xl bg-muted p-3">

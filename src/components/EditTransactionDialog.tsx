@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Field, AccountPicker, CategoryPicker } from "@/components/pickers";
+import { Field, AccountPicker, CategoryPicker, DatePicker } from "@/components/pickers";
 import { useUI, uiActions } from "@/lib/ui-store";
 import {
   useDB,
@@ -128,7 +128,7 @@ function CatTransferForm({ id }: { id: string }) {
         />
       </Field>
       <Field label="Date">
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <DatePicker value={date} onChange={setDate} title="Date" />
       </Field>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
@@ -451,7 +451,7 @@ function Form({ id }: { id: string }) {
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       <Field label="Date">
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <DatePicker value={date} onChange={setDate} title="Date" />
       </Field>
 
       <Field label="Memo">

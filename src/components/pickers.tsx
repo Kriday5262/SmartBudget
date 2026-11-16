@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, Search, Check, Pencil, Inbox } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Search, Check, Pencil, Inbox, CalendarDays } from "lucide-react";
+import { addDays, format, isSameDay } from "date-fns";
 import { BankMark } from "@/components/BankMark";
 import { CardBrandMark } from "@/components/CardBrandMark";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +14,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { useDB, ACCOUNT_TYPES, accountBalance, type DB } from "@/lib/store";
 import { money } from "@/lib/format";
@@ -776,6 +778,230 @@ export function SearchSelect({
             {!list.length && (
               <p className="py-6 text-center text-xs text-muted-foreground">No matches found</p>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/* ---------------- date ---------------- */
+
+/** "yyyy-mm-dd" → local Date (no UTC shift). */
+function parseISODate(v?: string): Date | undefined {
+  const m = v && /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return undefined;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+function toISODate(d: Date): string {
+  return format(d, "yyyy-MM-dd");
+}
+
+function describeDate(d: Date): string {
+  const today = new Date();
+  if (isSameDay(d, today)) return `Today · ${format(d, "d MMM yyyy")}`;
+  if (isSameDay(d, addDays(today, -1))) return `Yesterday · ${format(d, "d MMM yyyy")}`;
+  if (isSameDay(d, addDays(today, 1))) return `Tomorrow · ${format(d, "d MMM yyyy")}`;
+  return format(d, "EEE, d MMM yyyy");
+}
+
+/**
+ * Date field that opens a calendar card, styled like the Account / Category pickers.
+ * Value is a "yyyy-mm-dd" string ("" when empty).
+ *
+ * Keyboard: Enter/Space opens · arrows move a day/week · PgUp/PgDn month ·
+ * Shift+PgUp/PgDn year · Home/End week start/end · Enter picks ·
+ * T today · Y yesterday · Esc closes.
+ */
+export function DatePicker({
+  value,
+  onChange,
+  title = "Date",
+  placeholder = "Pick a date",
+  clearable = false,
+  min,
+  max,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  title?: string;
+  placeholder?: string;
+  /** show a "Clear" chip that sets the value to "" */
+  clearable?: boolean;
+  /** "yyyy-mm-dd" bounds */
+  min?: string;
+  max?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const selected = parseISODate(value);
+  const minDate = parseISODate(min);
+  const maxDate = parseISODate(max);
+  const today = new Date();
+  const yesterday = addDays(today, -1);
+  const inRange = (d: Date) =>
+    (!minDate || toISODate(d) >= toISODate(minDate)) &&
+    (!maxDate || toISODate(d) <= toISODate(maxDate));
+
+  function pick(d: Date | undefined) {
+    if (!d || !inRange(d)) return;
+    onChange(toISODate(d));
+    setOpen(false);
+  }
+
+  const quick = [
+    { label: "Today", key: "T", date: today },
+    { label: "Yesterday", key: "Y", date: yesterday },
+  ].filter((q) => inRange(q.date));
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-label={`${title}: ${selected ? format(selected, "EEEE, d MMMM yyyy") : placeholder}`}
+        className={cn(
+          "tap flex h-10 w-full items-center gap-2 rounded-xl border bg-card px-3 text-left text-sm no-select",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          className,
+        )}
+      >
+        <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span
+          className={cn(
+            "num min-w-0 flex-1 truncate",
+            selected ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {selected ? describeDate(selected) : placeholder}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          // Put focus on the selected day (else today) so arrows / Enter work right away.
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            const root = e.currentTarget as HTMLElement;
+            const focusDay = () => {
+              const day =
+                root.querySelector<HTMLButtonElement>("[data-selected-single='true']") ??
+                root.querySelector<HTMLButtonElement>(".rdp-today button") ??
+                root.querySelector<HTMLButtonElement>(".rdp-day button[tabindex='0']") ??
+                root.querySelector<HTMLButtonElement>(".rdp-day button");
+              day?.focus();
+            };
+            focusDay();
+            requestAnimationFrame(focusDay);
+          }}
+          // Hand focus back to the date field so Tab carries on through the form.
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            triggerRef.current?.focus();
+          }}
+          onKeyDown={(e) => {
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            if ((e.target as HTMLElement).tagName === "SELECT") return;
+            const k = e.key.toLowerCase();
+            if (k === "t" && inRange(today)) {
+              e.preventDefault();
+              pick(today);
+            } else if (k === "y" && inRange(yesterday)) {
+              e.preventDefault();
+              pick(yesterday);
+            }
+          }}
+          className={cn(
+            "max-h-[85vh] overflow-y-auto rounded-3xl no-select sm:max-w-sm",
+            "max-sm:top-auto max-sm:bottom-0 max-sm:w-full max-sm:max-w-full max-sm:translate-y-0 max-sm:max-h-[90dvh]",
+            "max-sm:rounded-b-none max-sm:rounded-t-[32px] max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]",
+          )}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-base">{title}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {(quick.length > 0 || (clearable && value)) && (
+              <div className="flex flex-wrap gap-2">
+                {quick.map((q) => {
+                  const active = !!selected && isSameDay(selected, q.date);
+                  return (
+                    <button
+                      key={q.label}
+                      type="button"
+                      onClick={() => pick(q.date)}
+                      className={cn(
+                        "tap inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-bold",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "bg-card hover:bg-muted",
+                      )}
+                    >
+                      {q.label}
+                      <kbd
+                        className={cn(
+                          "hidden rounded border px-1 font-mono text-[10px] font-medium sm:inline",
+                          active ? "border-primary-foreground/40" : "text-muted-foreground",
+                        )}
+                      >
+                        {q.key}
+                      </kbd>
+                    </button>
+                  );
+                })}
+                {clearable && value && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange("");
+                      setOpen(false);
+                    }}
+                    className="tap inline-flex h-9 items-center rounded-full border px-3.5 text-xs font-bold text-destructive hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="rounded-2xl border bg-card">
+              <Calendar
+                mode="single"
+                autoFocus
+                required={false}
+                selected={selected}
+                defaultMonth={selected ?? (maxDate && maxDate < today ? maxDate : today)}
+                onSelect={(d) => pick(d)}
+                startMonth={minDate ?? new Date(today.getFullYear() - 20, 0)}
+                endMonth={maxDate ?? new Date(today.getFullYear() + 30, 11)}
+                disabled={[
+                  ...(minDate ? [{ before: minDate }] : []),
+                  ...(maxDate ? [{ after: maxDate }] : []),
+                ]}
+                captionLayout="dropdown"
+                weekStartsOn={1}
+                className="w-full bg-transparent p-2 [--cell-size:2.25rem] max-sm:[--cell-size:2.75rem]"
+                classNames={{
+                  root: "w-full",
+                  // Today: bold teal number instead of a filled square, so it never clashes with the selection.
+                  today:
+                    "rdp-today rounded-md [&:not([data-selected=true])>button]:font-bold [&:not([data-selected=true])>button]:text-primary",
+                }}
+              />
+            </div>
+
+            <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
+              ←↑↓→ move · PgUp/PgDn month · Enter pick · Esc close
+            </p>
           </div>
         </DialogContent>
       </Dialog>

@@ -32,7 +32,10 @@ export function shiftMonth(key: string, delta: number): string {
 }
 
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local calendar date — toISOString() is UTC, which is "yesterday" before 5:30am in India.
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /**

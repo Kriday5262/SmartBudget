@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import QRCode from "qrcode";
-import { Plus, Trash2, QrCode, Copy, Check, Users, X, Link2 } from "lucide-react";
+import { Plus, Trash2, QrCode, Copy, Check, Users, X, Link2, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PersonPicker, personOptions, UpiPicker } from "@/components/pickers";
+import { PersonPicker, personOptions, UpiPicker, DatePicker } from "@/components/pickers";
 import { PendingBadge } from "@/components/PendingBadge";
 import {
   useDB,
@@ -259,6 +259,30 @@ function PayPage() {
     .filter((t) => t.pending)
     .sort((a, b) => b.date.localeCompare(a.date));
 
+  /** Open the "New split" form pre-filled from a transaction. */
+  function openSplitFor(t: Transaction) {
+    const account = db.accounts.find((a) => a.id === t.accountId);
+    const defaultPayer =
+      account?.name ?? db.accounts.find((a) => a.upiVpa)?.name ?? db.accounts[0]?.name ?? "";
+    setPrefill({
+      total: Math.abs(t.amount),
+      note: t.payeeName || t.memo,
+      date: t.date,
+      sourceTxnId: t.id,
+      payerName: defaultPayer,
+      people: (t.splits ?? []).map((s) => {
+        const cat = db.categories.find((c) => c.id === s.categoryId);
+        return {
+          key: cat ? `category:${cat.id}` : `category:${s.categoryId}`,
+          name: cat?.name ?? "Other",
+          upi: cat?.upiVpa,
+          amount: String(Math.abs(s.amount)),
+        };
+      }),
+    });
+    setCreating(true);
+  }
+
   return (
     <div className="space-y-5">
       <header className="flex items-start justify-between gap-4">
@@ -316,9 +340,9 @@ function PayPage() {
               {pendingTxns.length} to clear
             </span>
           </div>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {pendingTxns.map((t) => (
-              <PendingTxnRow key={t.id} txn={t} />
+              <PendingTxnRow key={t.id} txn={t} onSplit={() => openSplitFor(t)} />
             ))}
           </ul>
         </section>
@@ -443,31 +467,7 @@ function PayPage() {
             {splitTxns.map((t) => (
               <li key={t.id} className="relative">
                 <button
-                  onClick={() => {
-                    const account = db.accounts.find((a) => a.id === t.accountId);
-                    const defaultPayer =
-                      account?.name ??
-                      db.accounts.find((a) => a.upiVpa)?.name ??
-                      db.accounts[0]?.name ??
-                      "";
-                    setPrefill({
-                      total: Math.abs(t.amount),
-                      note: t.payeeName || t.memo,
-                      date: t.date,
-                      sourceTxnId: t.id,
-                      payerName: defaultPayer,
-                      people: (t.splits ?? []).map((s) => {
-                        const cat = db.categories.find((c) => c.id === s.categoryId);
-                        return {
-                          key: cat ? `category:${cat.id}` : `category:${s.categoryId}`,
-                          name: cat?.name ?? "Other",
-                          upi: cat?.upiVpa,
-                          amount: String(Math.abs(s.amount)),
-                        };
-                      }),
-                    });
-                    setCreating(true);
-                  }}
+                  onClick={() => openSplitFor(t)}
                   className="surface w-full px-4 py-3 pr-12 text-left hover:bg-muted/40"
                 >
                   <div className="flex items-center gap-3">
@@ -552,60 +552,89 @@ function PayPage() {
   );
 }
 
-/** A transaction flagged as pending; clears it from SmartPay when settled. */
-function PendingTxnRow({ txn }: { txn: Transaction }) {
+/**
+ * A transaction flagged as pending. Tapping it starts a UPI split (like a
+ * recommended split); the corner buttons edit it or clear it once settled.
+ */
+function PendingTxnRow({ txn, onSplit }: { txn: Transaction; onSplit: () => void }) {
   const db = useDB();
   const account = db.accounts.find((a) => a.id === txn.accountId)?.name ?? "—";
-  const splitCats = txn.splits?.length
-    ? txn.splits.map((s) => db.categories.find((c) => c.id === s.categoryId))
-    : [];
   const singleCat = db.categories.find((c) => c.id === txn.categoryId);
   const label = transactionLabel(db, txn);
+  const alreadySplit = db.splits.some((s) => s.sourceTxnId === txn.id);
+  const chip =
+    "inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground";
 
   return (
-    <li className="surface flex items-center gap-3 px-3.5 py-3">
+    <li className="relative">
+      <button
+        type="button"
+        onClick={alreadySplit ? () => uiActions.editTxn(txn.id) : onSplit}
+        className="surface w-full px-4 py-3 pr-12 text-left hover:bg-muted/40"
+      >
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-sm font-bold">
+              <span className="truncate">{label}</span>
+              <PendingBadge />
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {txn.memo && txn.memo !== label ? `${txn.memo} · ` : ""}
+              {prettyDate(txn.date)}
+            </p>
+          </div>
+          <span
+            className={cn(
+              "num shrink-0 text-sm font-bold",
+              txn.amount > 0 ? "text-primary" : "text-foreground",
+            )}
+          >
+            {money(Math.abs(txn.amount))}
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className={chip}>
+            <span className="truncate">{account}</span>
+          </span>
+          {txn.splits?.length ? (
+            txn.splits.map((s) => {
+              const cat = db.categories.find((c) => c.id === s.categoryId);
+              return (
+                <span key={s.categoryId} className={chip}>
+                  <CategoryInline cat={cat} /> {!cat && "?"} · {money(Math.abs(s.amount))}
+                </span>
+              );
+            })
+          ) : (
+            <span className={chip}>
+              {singleCat ? <CategoryInline cat={singleCat} /> : "Ready to Assign"}
+            </span>
+          )}
+        </div>
+        <p className="mt-2 pr-16 text-[11px] font-bold text-primary">
+          {alreadySplit
+            ? "Split created · tap to edit the transaction"
+            : "Do you want to generate a UPI split? →"}
+        </p>
+      </button>
       <button
         type="button"
         onClick={() => uiActions.editTxn(txn.id)}
-        className="tap min-w-0 flex-1 text-left"
+        aria-label={`Edit ${label}`}
+        className="tap absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-muted/60 text-muted-foreground hover:bg-muted"
       >
-        <p className="flex items-center gap-1.5 truncate text-sm font-bold">
-          <span className="truncate">{label}</span>
-          <PendingBadge />
-        </p>
-        <p className="truncate text-[11px] text-muted-foreground">
-          {account} ·{" "}
-          {splitCats.length ? (
-            <CategoryList cats={splitCats} />
-          ) : singleCat ? (
-            <CategoryInline cat={singleCat} />
-          ) : (
-            "Ready to Assign"
-          )}{" "}
-          · {prettyDate(txn.date)}
-        </p>
-        {txn.memo && txn.memo !== label && (
-          <p className="truncate text-[11px] italic text-muted-foreground/75">{txn.memo}</p>
-        )}
+        <Pencil className="h-3.5 w-3.5" />
       </button>
-      <span
-        className={cn(
-          "num shrink-0 text-sm font-bold",
-          txn.amount > 0 ? "text-primary" : "text-foreground",
-        )}
-      >
-        {money(txn.amount)}
-      </span>
       <button
         type="button"
         onClick={() => {
           setTransactionPending(txn.id, false);
           toast.success("Transaction cleared");
         }}
-        aria-label={`Clear ${label} as settled`}
-        className="tap flex shrink-0 items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+        aria-label={`Mark ${label} as cleared`}
+        className="tap absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary hover:bg-primary/20"
       >
-        <Check className="h-3.5 w-3.5" /> Clear
+        <Check className="h-3 w-3" /> Clear
       </button>
     </li>
   );
@@ -914,7 +943,7 @@ function SplitForm({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">Date</Label>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DatePicker value={date} onChange={setDate} title="Date" />
         </div>
       </div>
 

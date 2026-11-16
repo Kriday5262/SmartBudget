@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Plus, Undo2, Redo2, Lock, ChevronDown } from "lucide-react";
+import { Plus, Undo2, Redo2, Lock, ChevronDown, Loader2 } from "lucide-react";
 import { BankMark } from "./BankMark";
 import { CardBrandMark } from "./CardBrandMark";
 import { NAV_ITEMS, BottomTabBar } from "./BottomTabBar";
@@ -19,11 +19,14 @@ import {
   useUndo,
   undo,
   redo,
+  useSwitchingHome,
+  getHouseholds,
+  needsSetup,
   ACCOUNT_TYPES,
   type AccountType,
 } from "@/lib/store";
-import { money } from "@/lib/format";
-import { uiActions } from "@/lib/ui-store";
+import { money, moneyWhole } from "@/lib/format";
+import { uiActions, useUI } from "@/lib/ui-store";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { LockScreen } from "./LockScreen";
 import { LogoMark } from "./Logo";
@@ -32,6 +35,8 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme";
 import { todayISO } from "@/lib/format";
 import { KeyboardModePanel } from "./KeyboardModePanel";
+import { SetupWizard } from "./SetupWizard";
+import { GuideTour } from "./GuideTour";
 import { useUpdateStatus } from "@/lib/updates";
 
 const KEYBOARD_MODE_KEY = "smartbudget.keyboard_mode";
@@ -43,6 +48,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Also runs the daily update check after sign-in.
   const { status: updateStatus } = useUpdateStatus();
   const { canUndo, canRedo } = useUndo();
+  const switchingTo = useSwitchingHome();
+  const { setupMode } = useUI();
+  const switchingName = switchingTo
+    ? (getHouseholds(db).find((h) => h.id === switchingTo)?.name ?? "household")
+    : null;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [keyboardMode, setKeyboardMode] = useState(false);
   const [keyboardDate, setKeyboardDate] = useState(todayISO());
@@ -164,6 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.to}
                 to={item.to}
                 preload="intent"
+                data-tour={`nav${item.to}`}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
                   active
@@ -190,6 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mt-3 flex items-center gap-2">
           <button
             onClick={() => uiActions.openAdd("transaction")}
+            data-tour="add"
             className="tap flex flex-1 items-center justify-center gap-2 rounded-2xl gradient-primary px-3 py-2.5 text-sm font-bold text-primary-foreground"
           >
             <Plus className="h-4 w-4" strokeWidth={2.6} />
@@ -224,7 +236,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-10">
+      {switchingName && (
+        <div
+          role="status"
+          className="fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold shadow-lg md:left-[calc(50%+8rem)]"
+        >
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Switching to {switchingName}…
+        </div>
+      )}
+      <main
+        aria-busy={!!switchingTo}
+        className={cn(
+          "relative min-w-0 flex-1 pb-[calc(6rem+env(safe-area-inset-bottom))] transition-opacity md:pb-10",
+          switchingTo && "pointer-events-none opacity-40",
+        )}
+      >
         <PullToRefresh>
           <div
             key={pathname}
@@ -238,6 +265,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <BottomTabBar />
       <AddPopup />
       <EditAccountDialog />
+      {/* First-run setup for a brand-new account or household, or Settings ›
+          Add household. Finishing or skipping marks the household as set up. */}
+      {hydrated && !switchingTo && (setupMode || needsSetup(db)) ? (
+        <SetupWizard mode={setupMode ?? "setup"} />
+      ) : (
+        hydrated && <GuideTour />
+      )}
       <EditTransactionDialog />
       <JoinHomeInvitePopup />
       <Toaster position="top-center" richColors />
@@ -246,13 +280,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 const SIDEBAR_COLLAPSED_KEY = "smartbudget.sidebar_collapsed_groups";
-
-/** ₹1,03,830 — whole rupees, so names get the room in the narrow sidebar. */
-const inrWhole = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 0,
-});
 
 /** Accounts grouped by type, with collapsible sections and per-group totals. */
 function SidebarAccounts({ pathname }: { pathname: string }) {
@@ -330,7 +357,7 @@ function SidebarAccounts({ pathname }: { pathname: string }) {
                   )}
                   title={money(g.total)}
                 >
-                  {inrWhole.format(g.total)}
+                  {moneyWhole(g.total)}
                 </span>
               </button>
 
@@ -357,7 +384,7 @@ function SidebarAccounts({ pathname }: { pathname: string }) {
                             {a.type === "credit" && a.brand ? (
                               <CardBrandMark brand={a.brand} className="h-4 w-6" />
                             ) : (
-                              <BankMark bank={a.bank} className="h-[18px] w-[18px]" />
+                              <BankMark bank={a.bank} logo={a.bankLogo} className="h-[18px] w-[18px]" />
                             )}
                           </span>
                           <span
@@ -382,7 +409,7 @@ function SidebarAccounts({ pathname }: { pathname: string }) {
                                   : "text-muted-foreground",
                             )}
                           >
-                            {inrWhole.format(balance)}
+                            {moneyWhole(balance)}
                           </span>
                         </Link>
                       </li>

@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
+import { currencySymbol } from "@/lib/format";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useUI, uiActions } from "@/lib/ui-store";
-import { SearchSelect, UpiPicker, DatePicker } from "@/components/pickers";
+import { SearchSelect, UpiPicker, DatePicker, BankPicker } from "@/components/pickers";
 import {
   useDB,
   updateAccount,
-  BANKS,
   CARD_BRANDS,
   ACCOUNT_TYPES,
   type BankName,
   type CardBrand,
   type AccountType,
+  type Account,
 } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -63,10 +64,15 @@ export function EditAccountDialog() {
 function Form({ id }: { id: string }) {
   const db = useDB();
   const a = db.accounts.find((x) => x.id === id);
-  if (!a) return null;
+  return a ? <AccountForm a={a} /> : null;
+}
+
+function AccountForm({ a }: { a: Account }) {
+  const id = a.id;
   const [name, setName] = useState(a.name);
   const [type, setType] = useState<AccountType>(a.type);
   const [bank, setBank] = useState<BankName>(a.bank ?? "Other");
+  const [bankLogo, setBankLogo] = useState<string | undefined>(a.bankLogo);
   const [brand, setBrand] = useState<CardBrand>(a.brand ?? "visa");
   const [balance, setBalance] = useState(String(a.startingBalance ?? 0));
   const [limit, setLimit] = useState(a.creditLimit ? String(a.creditLimit) : "");
@@ -96,6 +102,7 @@ function Form({ id }: { id: string }) {
       name: name.trim(),
       type,
       bank,
+      bankLogo,
       brand: type === "credit" ? brand : undefined,
       startingBalance: Number(balance) || 0,
       creditLimit: type === "credit" ? Number(limit) || undefined : undefined,
@@ -131,11 +138,13 @@ function Form({ id }: { id: string }) {
           />
         </Field>
         <Field label="Bank">
-          <SearchSelect
+          <BankPicker
             value={bank}
-            onChange={(v) => setBank(v as BankName)}
-            options={BANKS.map((b) => ({ value: b, label: b }))}
-            title="Bank"
+            logo={bankLogo}
+            onChange={(c) => {
+              setBank(c.bank);
+              setBankLogo(c.logo);
+            }}
           />
         </Field>
       </div>
@@ -152,7 +161,9 @@ function Form({ id }: { id: string }) {
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label={type === "credit" ? "Opening outstanding (₹)" : "Starting balance (₹)"}>
+        <Field
+          label={`${type === "credit" ? "Opening outstanding" : "Starting balance"} (${currencySymbol()})`}
+        >
           <Input
             className="num"
             inputMode="decimal"
@@ -161,7 +172,7 @@ function Form({ id }: { id: string }) {
           />
         </Field>
         {type === "credit" && (
-          <Field label="Credit limit (₹)">
+          <Field label={`Credit limit (${currencySymbol()})`}>
             <Input
               className="num"
               inputMode="decimal"

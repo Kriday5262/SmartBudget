@@ -159,6 +159,54 @@ export const createHomeApi = createServerFn({ method: "POST" })
     return createHomeServer((ctx.data as { name: string }).name, me.username);
   });
 
+/** Search banks worldwide by name, with logos (done here so the browser contacts no one else). */
+export const searchBanksApi = createServerFn({ method: "POST" })
+  .validator((data: { query: string }) => data)
+  .handler(async (ctx) => {
+    const { requireUser } = await import("./server-auth");
+    const { ipRateLimited } = await import("./server-db");
+    const { searchBanksServer } = await import("./server-banks");
+    const me = requireUser();
+    if (ipRateLimited(`bank-search:${me.username}`, 60, 60_000)) return [];
+    return searchBanksServer(String((ctx.data as { query: string }).query ?? ""));
+  });
+
+/** The logo for one bank from a recent search (by its id), as a data: URL. */
+export const bankLogoApi = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => data)
+  .handler(async (ctx) => {
+    const { requireUser } = await import("./server-auth");
+    const { bankLogoServer } = await import("./server-banks");
+    requireUser();
+    const id = String((ctx.data as { id: string }).id ?? "");
+    if (!/^Q\d{1,12}$/.test(id)) return null;
+    return (await bankLogoServer(id)) ?? null;
+  });
+
+/** Create a login for someone in the caller's household (it opens that household by default). */
+export const createMemberAccountApi = createServerFn({ method: "POST" })
+  .validator((data: { homeId: string; name: string; username: string; password: string }) => data)
+  .handler(async (ctx) => {
+    const { requireHome } = await import("./server-auth");
+    const { createMemberAccountServer, ipRateLimited } = await import("./server-db");
+    const input = ctx.data as { homeId: string; name: string; username: string; password: string };
+    requireHome(input.homeId);
+    if (ipRateLimited(`member-create:${input.homeId}`, 20, 60 * 60_000)) {
+      return { ok: false, error: "Too many new accounts. Try again later." };
+    }
+    return createMemberAccountServer(input, input.homeId);
+  });
+
+export const renameHomeApi = createServerFn({ method: "POST" })
+  .validator((data: { homeId: string; name: string }) => data)
+  .handler(async (ctx) => {
+    const { requireHome } = await import("./server-auth");
+    const { renameHomeServer } = await import("./server-db");
+    const { homeId, name } = ctx.data as { homeId: string; name: string };
+    requireHome(homeId);
+    return renameHomeServer(homeId, name);
+  });
+
 /* ── Backups ─────────────────────────────────────────────────────── */
 
 export const listBackupsApi = createServerFn({ method: "POST" })

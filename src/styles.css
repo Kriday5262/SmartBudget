@@ -1025,3 +1025,359 @@ select {
     opacity: 1 !important;
   }
 }
+
+/* ---------- Setup wizard ---------- */
+@keyframes sb-wiz-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(48px) scale(0.98);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes sb-wiz-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-48px) scale(0.98);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes sb-wiz-item {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sb-wiz-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-8deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes sb-wiz-bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes sb-wiz-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+@keyframes sb-wiz-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.6) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(90deg);
+  }
+}
+@keyframes sb-wiz-confetti {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+  }
+}
+@keyframes sb-wiz-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes sb-wiz-tour {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sb-wiz-in-right {
+  animation: sb-wiz-in-right 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sb-wiz-in-left {
+  animation: sb-wiz-in-left 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sb-wiz-item {
+  animation: sb-wiz-item 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sb-wiz-pop {
+  animation: sb-wiz-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.sb-wiz-bump {
+  animation: sb-wiz-bump 0.35s ease-out;
+}
+.sb-wiz-ring {
+  animation: sb-wiz-ring 2.4s ease-out infinite;
+}
+.sb-wiz-twinkle {
+  animation: sb-wiz-twinkle 2.6s ease-in-out infinite;
+}
+.sb-wiz-confetti {
+  animation: sb-wiz-confetti 1.6s cubic-bezier(0.15, 0.6, 0.35, 1) both;
+}
+.sb-wiz-draw {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: sb-wiz-draw 0.6s 0.35s ease-out forwards;
+}
+.sb-wiz-tour {
+  animation: sb-wiz-tour 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-wiz-in-right,
+  .sb-wiz-in-left,
+  .sb-wiz-item,
+  .sb-wiz-pop,
+  .sb-wiz-bump,
+  .sb-wiz-tour {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+  .sb-wiz-ring,
+  .sb-wiz-twinkle,
+  .sb-wiz-confetti {
+    animation: none !important;
+    opacity: 0;
+  }
+  .sb-wiz-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---------- Penny, the guide mascot ---------- */
+@keyframes sb-penny-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes sb-penny-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.18;
+  }
+  50% {
+    transform: scaleX(0.8);
+    opacity: 0.1;
+  }
+}
+@keyframes sb-penny-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes sb-penny-look {
+  0%,
+  30%,
+  100% {
+    transform: translate(0, 0);
+  }
+  40%,
+  55% {
+    transform: translate(-3px, 1px);
+  }
+  65%,
+  80% {
+    transform: translate(2px, -1px);
+  }
+}
+@keyframes sb-penny-talk {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1.1);
+  }
+}
+@keyframes sb-penny-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.6);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.05);
+  }
+  100% {
+    transform: none;
+  }
+}
+.sb-penny .sb-penny-body {
+  animation: sb-penny-bob 3.2s ease-in-out infinite;
+}
+.sb-penny .sb-penny-shadow {
+  transform-origin: 50px 96px;
+  animation: sb-penny-shadow 3.2s ease-in-out infinite;
+}
+.sb-penny .sb-penny-eyes {
+  transform-origin: 50px 48px;
+  animation: sb-penny-blink 4.5s ease-in-out infinite;
+}
+.sb-penny .sb-penny-look {
+  animation: sb-penny-look 7s ease-in-out infinite;
+}
+.sb-penny .sb-penny-talk {
+  transform-origin: 50px 69px;
+  animation: sb-penny-talk 0.22s ease-in-out infinite;
+}
+.sb-penny-in {
+  animation: sb-penny-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-penny .sb-penny-body,
+  .sb-penny .sb-penny-shadow,
+  .sb-penny .sb-penny-look,
+  .sb-penny .sb-penny-talk,
+  .sb-penny-in {
+    animation: none !important;
+  }
+}
+
+/* ---------- Penny's spotlight: zoom the control she's talking about ---------- */
+@keyframes sb-tour-zoom {
+  0%,
+  100% {
+    scale: 1;
+  }
+  50% {
+    scale: 1.1;
+  }
+}
+@keyframes sb-tour-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+@keyframes sb-tour-swipe-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -90px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -110px) scale(0.8);
+  }
+}
+@keyframes sb-tour-swipe-down {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, 110px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 130px) scale(0.8);
+  }
+}
+@keyframes sb-tour-trail-up {
+  0%,
+  15% {
+    transform: translateX(-50%) scaleY(0);
+    opacity: 0;
+  }
+  75% {
+    transform: translateX(-50%) scaleY(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(-50%) scaleY(1);
+    opacity: 0;
+  }
+}
+.sb-tour-zoom {
+  animation: sb-tour-zoom 1.6s ease-in-out infinite;
+}
+.sb-tour-ring {
+  animation: sb-tour-ring 1.6s ease-out infinite;
+}
+.sb-tour-swipe-up {
+  animation: sb-tour-swipe-up 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.sb-tour-swipe-down {
+  animation: sb-tour-swipe-down 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.sb-tour-trail {
+  animation: sb-tour-trail-up 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-tour-zoom,
+  .sb-tour-ring,
+  .sb-tour-trail {
+    animation: none !important;
+  }
+  .sb-tour-swipe-up,
+  .sb-tour-swipe-down {
+    animation-duration: 3.6s !important;
+  }
+}

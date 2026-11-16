@@ -1,7 +1,15 @@
 import { useSyncExternalStore } from "react";
 import { saveDB } from "./api";
-import { getCurrentHomeId, setActiveHomeId, joinUserToHome, getActiveUser, saveUsers, getRegisteredUsers, handleAuthError } from "./lock";
-import { monthKey, todayISO } from "./format";
+import {
+  getCurrentHomeId,
+  setActiveHomeId,
+  joinUserToHome,
+  getActiveUser,
+  saveUsers,
+  getRegisteredUsers,
+  handleAuthError,
+} from "./lock";
+import { monthKey, todayISO, setCurrency, parseCustomCurrency } from "./format";
 
 /** The four account families the app understands. */
 export type AccountType = "account" | "credit" | "fd" | "rd";
@@ -51,7 +59,8 @@ export const BANKS = [
   "OneCard",
   "Other",
 ] as const;
-export type BankName = (typeof BANKS)[number];
+/** Any bank or provider name; the built-in list above is just suggestions. */
+export type BankName = string;
 
 export const CARD_BRANDS: { id: CardBrand; label: string }[] = [
   { id: "visa", label: "Visa" },
@@ -70,6 +79,8 @@ export type Account = {
   startingBalance: number;
   /** issuing bank, for accounts / cards / deposits */
   bank?: BankName;
+  /** the bank's logo as a data: URL, found by the bank search */
+  bankLogo?: string;
   /** owner's UPI id, so SmartPay knows who paid when splitting a bill */
   upiVpa?: string;
   /** credit-card only */
@@ -163,6 +174,8 @@ export type Loan = {
 export type HomeMember = {
   id: string;
   name: string;
+  /** set when the member has their own login */
+  username?: string;
   email?: string;
   role: "owner" | "editor" | "viewer";
   joinedAt: string;
@@ -242,10 +255,7 @@ let dbInitialized = false;
  */
 if (typeof window !== "undefined") {
   try {
-    for (const key of [
-      "smartbudget_fast_cache_v1",
-      "smartbudget_fast_cache_home-default",
-    ]) {
+    for (const key of ["smartbudget_fast_cache_v1", "smartbudget_fast_cache_home-default"]) {
       localStorage.removeItem(key);
     }
     for (let i = 0; i < localStorage.length; i++) {
@@ -313,7 +323,7 @@ export async function waitForPendingSave(): Promise<void> {
 }
 
 export async function refreshDB(): Promise<void> {
-  if (pendingSave || !dbInitialized) return;
+  if (pendingSave || !dbInitialized || switchingTo) return;
   const homeId = getCurrentHomeId();
   try {
     const { fetchDB } = await import("./api");
@@ -321,7 +331,7 @@ export async function refreshDB(): Promise<void> {
     // A local mutation may have started while the fetch was in flight. Re-check
     // the pending-save guard so a stale server snapshot doesn't clobber unsaved
     // local changes (e.g. a freshly created category group).
-    if (pendingSave) return;
+    if (pendingSave || switchingTo || homeId !== getCurrentHomeId()) return;
     const parsed = parseDBValue(json as any);
     if (parsed && Array.isArray(parsed.accounts)) {
       const current = db ? JSON.stringify(db) : "";
@@ -350,6 +360,8 @@ function load(): DB {
     if (!db.loans) db.loans = [];
     if (!db.reconLinks) db.reconLinks = [];
     if (!db.settings) db.settings = {};
+    // Every amount on screen follows the loaded household's currency.
+    setCurrency(db.settings.currency, parseCustomCurrency(db.settings.currencyCustom));
     return db;
   }
 
@@ -1347,8 +1359,10 @@ export function getHouseholds(db: DB): Household[] {
 
 export function getActiveHousehold(db: DB): Household {
   const homes = getHouseholds(db);
-  if (db.activeHomeId) {
-    const found = homes.find((h) => h.id === db.activeHomeId);
+  // The household whose data is loaded is the current one. Older builds wrote
+  // activeHomeId into the household being left, so the stored value can be stale.
+  for (const id of [_loadedHomeId, db.activeHomeId]) {
+    const found = id ? homes.find((h) => h.id === id) : undefined;
     if (found) return found;
   }
   return homes[0];
@@ -1417,12 +1431,76 @@ async function reloadHome(homeId: string) {
   } catch {}
 }
 
+/* ---------- switching households ---------- */
+
+let switchingTo: string | null = null;
+const switchListeners = new Set<() => void>();
+function setSwitching(id: string | null) {
+  switchingTo = id;
+  switchListeners.forEach((l) => l());
+}
+
+/** True once a household's data has arrived from the server. */
+export function isHomeLoaded(): boolean {
+  return _loadedHomeId !== null;
+}
+
+/**
+ * A brand-new household that hasn't been through the setup wizard: nothing in
+ * it yet and never marked as set up. Existing households with data never qualify.
+ */
+export function needsSetup(d: DB): boolean {
+  return (
+    _loadedHomeId !== null &&
+    d.settings?.onboarded !== "1" &&
+    d.accounts.length === 0 &&
+    d.transactions.length === 0 &&
+    d.categories.length === 0
+  );
+}
+
+/** Id of the household currently being loaded, or null. */
+export function useSwitchingHome(): string | null {
+  return useSyncExternalStore(
+    (l) => {
+      switchListeners.add(l);
+      return () => switchListeners.delete(l);
+    },
+    () => switchingTo,
+    () => null,
+  );
+}
+
+/**
+ * Switch to another household. Loads it first and only then makes it current,
+ * so the old household stays usable (and nothing half-switches) if loading
+ * fails. Throws on failure so the caller can say so.
+ */
 export async function switchHousehold(id: string) {
-  setActiveHomeId(id);
-  mutate((d) => {
-    d.activeHomeId = id;
-  });
-  await reloadHome(id);
+  if (switchingTo) return;
+  setSwitching(id);
+  try {
+    // Make sure edits to the household being left have reached the server.
+    await waitForPendingSave();
+    const { fetchDB } = await import("./api");
+    const json = await fetchDB({ data: { homeId: id } });
+    const parsed = json ? parseDBValue(json) : null;
+    if (!parsed || !Array.isArray(parsed.accounts)) {
+      throw new Error("That household couldn't be loaded.");
+    }
+    parsed.activeHomeId = id;
+    setActiveHomeId(id);
+    db = parsed;
+    _loadedHomeId = id;
+    undoStack = [];
+    redoStack = [];
+    listeners.forEach((l) => l());
+  } catch (err) {
+    handleAuthError(err);
+    throw err instanceof Error ? err : new Error("That household couldn't be loaded.");
+  } finally {
+    setSwitching(null);
+  }
 }
 
 export async function joinHousehold(code: string): Promise<boolean> {
@@ -1465,6 +1543,62 @@ export async function joinHousehold(code: string): Promise<boolean> {
   setActiveHomeId(res.homeId);
   await reloadHome(res.homeId);
   return true;
+}
+
+/**
+ * Create a login (username + password) for someone and add them to the current
+ * household. Their account opens this household by default.
+ */
+export async function addHomeMemberAccount(input: {
+  name: string;
+  username: string;
+  password: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const home = getActiveHousehold(load());
+  try {
+    const { createMemberAccountApi } = await import("./api");
+    const res = await createMemberAccountApi({ data: { homeId: home.id, ...input } });
+    if (!res.ok || !res.user)
+      return { ok: false, error: res.error ?? "Couldn't create the account." };
+    const user = res.user;
+    mutate((d) => {
+      if (!d.households) d.households = [defaultHousehold()];
+      const h = d.households.find((x) => x.id === home.id);
+      if (h && !h.members.some((m) => m.username === user.username)) {
+        h.members.push({
+          id: "mem-" + uid(),
+          name: user.name,
+          username: user.username,
+          role: "editor",
+          joinedAt: new Date().toISOString().slice(0, 10),
+        });
+      }
+    });
+    return { ok: true };
+  } catch (err) {
+    handleAuthError(err);
+    return { ok: false, error: "Couldn't reach the server. Try again." };
+  }
+}
+
+/** Rename the current household, here and on the server. */
+export async function renameHousehold(name: string): Promise<boolean> {
+  const clean = name.trim();
+  if (!clean) return false;
+  const home = getActiveHousehold(load());
+  mutate((d) => {
+    if (!d.households) d.households = [defaultHousehold()];
+    const h = d.households.find((x) => x.id === home.id);
+    if (h) h.name = clean;
+  });
+  try {
+    const { renameHomeApi } = await import("./api");
+    const res = await renameHomeApi({ data: { homeId: home.id, name: clean } });
+    return !!res.ok;
+  } catch (err) {
+    handleAuthError(err);
+    return false;
+  }
 }
 
 export function addHomeMember(name: string, email?: string) {

@@ -150,7 +150,7 @@ function TypeSection({
               a.type === "credit" && a.brand ? (
                 <CardBrandMark brand={a.brand} className="h-5 w-8 shrink-0" />
               ) : (
-                <BankMark bank={a.bank} className="h-6 w-6 shrink-0" />
+                <BankMark bank={a.bank} logo={a.bankLogo} className="h-6 w-6 shrink-0" />
               );
             return (
               <li key={a.id} className="surface px-3.5 py-2.5">

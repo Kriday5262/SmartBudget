@@ -41,7 +41,45 @@ const BRAND_COLORS: Record<string, { bg: string; text: string; label: string }> 
   OneCard: { bg: "#111111", text: "#F37021", label: "ONE" },
 };
 
-export function BankMark({ bank, className }: { bank?: BankName; className?: string }) {
+/** Initials for a bank with no logo: "Commercial Bank of Ethiopia" → "CBE". */
+function initials(name: string): string {
+  const words = name
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((w) => w && !/^(of|the|and|de|du|la|le|bank)$/i.test(w));
+  if (words.length === 0) return name.slice(0, 2).toUpperCase();
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  return words
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+/**
+ * A bank's mark: the logo found by the bank search (`logo`), else a built-in
+ * logo or brand badge, else the bank's initials, else a generic bank icon.
+ */
+export function BankMark({
+  bank,
+  logo,
+  className,
+}: {
+  bank?: BankName;
+  /** data: URL saved with the account */
+  logo?: string;
+  className?: string;
+}) {
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt={bank ?? "Bank"}
+        className={className}
+        style={{ objectFit: "contain", borderRadius: "22%", background: "#fff", padding: 2 }}
+      />
+    );
+  }
   if (bank && ICON_MAP[bank]) {
     return (
       <img src={ICON_MAP[bank]} alt={bank} className={className} style={{ objectFit: "contain" }} />
@@ -63,6 +101,26 @@ export function BankMark({ bank, className }: { bank?: BankName; className?: str
           textAnchor="middle"
         >
           {b.label}
+        </text>
+      </svg>
+    );
+  }
+
+  if (bank && bank !== "Other") {
+    const label = initials(bank);
+    return (
+      <svg viewBox="0 0 32 32" className={className} role="img" aria-label={bank}>
+        <rect width="32" height="32" rx="9" className="fill-primary/20" />
+        <text
+          x="16"
+          y="20.5"
+          className="fill-primary"
+          fontSize={label.length > 2 ? 10 : 12}
+          fontWeight="800"
+          fontFamily="system-ui, sans-serif"
+          textAnchor="middle"
+        >
+          {label}
         </text>
       </svg>
     );

@@ -12,6 +12,7 @@ import {
   CategoryPicker,
   SearchSelect,
   DatePicker,
+  BankPicker,
 } from "@/components/pickers";
 import { useUI, uiActions, type AddTab } from "@/lib/ui-store";
 import {
@@ -20,13 +21,12 @@ import {
   addTransfer,
   addAccount,
   addGoal,
-  BANKS,
   CARD_BRANDS,
   type BankName,
   type CardBrand,
   type AccountType,
 } from "@/lib/store";
-import { money, todayISO } from "@/lib/format";
+import { currencySymbol, money, todayISO } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const TITLES: Record<AddTab, string> = {
@@ -217,7 +217,7 @@ function TransactionForm({
           excludeId={accountId}
         />
       ) : (
-        <Field label="Amount (₹)" error={errors.amount}>
+        <Field label={`Amount (${currencySymbol()})`} error={errors.amount}>
           <Input
             className="num"
             inputMode="decimal"
@@ -229,7 +229,7 @@ function TransactionForm({
       )}
 
       {kind === "transfer" && (
-        <Field label="Amount (₹)" error={errors.amount}>
+        <Field label={`Amount (${currencySymbol()})`} error={errors.amount}>
           <Input
             className="num"
             inputMode="decimal"
@@ -399,7 +399,8 @@ function TransactionForm({
 function AccountForm({ onSaved }: { onSaved: (m: string) => void }) {
   const [name, setName] = useState("");
   const [type, setType] = useState<Exclude<AccountType, "credit">>("account");
-  const [bank, setBank] = useState<BankName>("HDFC");
+  const [bank, setBank] = useState<BankName>("Other");
+  const [bankLogo, setBankLogo] = useState<string | undefined>();
   const [balance, setBalance] = useState("");
   const [maturityDate, setMaturityDate] = useState("");
   const [rateOfInterest, setRateOfInterest] = useState("");
@@ -417,6 +418,7 @@ function AccountForm({ onSaved }: { onSaved: (m: string) => void }) {
       name: name.trim(),
       type,
       bank,
+      bankLogo,
       startingBalance: Number(balance) || 0,
       maturityDate: isDeposit && maturityDate ? maturityDate : undefined,
       rateOfInterest: isDeposit && rateOfInterest ? Number(rateOfInterest) : undefined,
@@ -443,15 +445,17 @@ function AccountForm({ onSaved }: { onSaved: (m: string) => void }) {
           />
         </Field>
         <Field label="Bank">
-          <SearchSelect
+          <BankPicker
             value={bank}
-            onChange={(v) => setBank(v as BankName)}
-            options={BANKS.map((b) => ({ value: b, label: b }))}
-            title="Bank"
+            logo={bankLogo}
+            onChange={(c) => {
+              setBank(c.bank);
+              setBankLogo(c.logo);
+            }}
           />
         </Field>
       </div>
-      <Field label="Starting balance (₹)">
+      <Field label={`Starting balance (${currencySymbol()})`}>
         <Input
           className="num"
           inputMode="decimal"
@@ -493,7 +497,8 @@ function AccountForm({ onSaved }: { onSaved: (m: string) => void }) {
 
 function CardForm({ onSaved }: { onSaved: (m: string) => void }) {
   const [name, setName] = useState("");
-  const [bank, setBank] = useState<BankName>("HDFC");
+  const [bank, setBank] = useState<BankName>("Other");
+  const [bankLogo, setBankLogo] = useState<string | undefined>();
   const [brand, setBrand] = useState<CardBrand>("visa");
   const [outstanding, setOutstanding] = useState("");
   const [limit, setLimit] = useState("");
@@ -511,6 +516,7 @@ function CardForm({ onSaved }: { onSaved: (m: string) => void }) {
       name: name.trim(),
       type: "credit",
       bank,
+      bankLogo,
       brand,
       startingBalance: -Math.abs(Number(outstanding) || 0),
       creditLimit: Number(limit) || undefined,
@@ -531,11 +537,13 @@ function CardForm({ onSaved }: { onSaved: (m: string) => void }) {
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Bank">
-          <SearchSelect
+          <BankPicker
             value={bank}
-            onChange={(v) => setBank(v as BankName)}
-            options={BANKS.map((b) => ({ value: b, label: b }))}
-            title="Bank"
+            logo={bankLogo}
+            onChange={(c) => {
+              setBank(c.bank);
+              setBankLogo(c.logo);
+            }}
           />
         </Field>
         <Field label="Card network">
@@ -548,7 +556,7 @@ function CardForm({ onSaved }: { onSaved: (m: string) => void }) {
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Outstanding (₹)">
+        <Field label={`Outstanding (${currencySymbol()})`}>
           <Input
             className="num"
             inputMode="decimal"
@@ -556,7 +564,7 @@ function CardForm({ onSaved }: { onSaved: (m: string) => void }) {
             onChange={(e) => setOutstanding(e.target.value)}
           />
         </Field>
-        <Field label="Credit limit (₹)" error={errors.limit}>
+        <Field label={`Credit limit (${currencySymbol()})`} error={errors.limit}>
           <Input
             className="num"
             inputMode="decimal"
@@ -615,7 +623,7 @@ function GoalForm({ onSaved }: { onSaved: (m: string) => void }) {
       <Field label="Goal name" error={errors.name}>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Goa trip" />
       </Field>
-      <Field label="Target amount (₹)" error={errors.target}>
+      <Field label={`Target amount (${currencySymbol()})`} error={errors.target}>
         <Input
           className="num"
           inputMode="decimal"

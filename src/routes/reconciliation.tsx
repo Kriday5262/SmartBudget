@@ -12,7 +12,7 @@ import {
   type CategoryGroup,
   type DB,
 } from "@/lib/store";
-import { money, monthKey, monthLabel } from "@/lib/format";
+import { currencySymbol, amountNumber, money, monthKey, monthLabel } from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
@@ -138,11 +138,10 @@ function ReconciliationPage() {
                 netDifference === 0 ? "text-foreground" : "text-destructive",
               )}
             >
-              <span className={netDifference === 0 ? "text-primary" : "text-destructive"}>₹</span>{" "}
-              {Math.abs(netDifference).toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              <span className={netDifference === 0 ? "text-primary" : "text-destructive"}>
+                {currencySymbol()}
+              </span>{" "}
+              {amountNumber(Math.abs(netDifference))}
             </p>
             <p
               className={cn(
@@ -234,7 +233,7 @@ function MappingCard({ row }: { row: Row }) {
               a.type === "credit" && a.brand ? (
                 <CardBrandMark brand={a.brand} className="h-5 w-8 shrink-0" />
               ) : (
-                <BankMark bank={a.bank} className="h-5 w-5 shrink-0" />
+                <BankMark bank={a.bank} logo={a.bankLogo} className="h-5 w-5 shrink-0" />
               ),
           }))}
         />
@@ -257,7 +256,7 @@ function MappingCard({ row }: { row: Row }) {
         <Bar label="Budget" pct={groupPct} className="bg-foreground/40" />
         <p className="text-xs text-muted-foreground">
           {balanced ? (
-            "Every rupee in these accounts has a job in these groups."
+            "All the money in these accounts has a job in these groups."
           ) : row.difference > 0 ? (
             <>
               Your accounts hold{" "}

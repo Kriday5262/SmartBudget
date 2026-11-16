@@ -91,7 +91,7 @@ function AccountDetail() {
             {account.type === "credit" && account.brand ? (
               <CardBrandMark brand={account.brand} className="h-6 w-9" />
             ) : (
-              <BankMark bank={account.bank} className="h-6 w-6" />
+              <BankMark bank={account.bank} logo={account.bankLogo} className="h-6 w-6" />
             )}
             <h1 className="text-xl font-bold">{account.name}</h1>
           </div>

@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
-  Check,
   Copy,
   CreditCard,
   Database,
@@ -13,8 +12,6 @@ import {
   HelpCircle,
   KeyRound,
   Lock as LockIcon,
-  Monitor,
-  Moon,
   Palette,
   Plus,
   RefreshCw,
@@ -24,11 +21,12 @@ import {
   Share2,
   ShieldCheck,
   Smartphone,
-  Sun,
   Trash2,
   Upload,
   UserPlus,
   X,
+  Loader2,
+  Banknote,
 } from "lucide-react";
 import {
   Category,
@@ -61,9 +59,8 @@ import {
   mutate,
   getHouseholds,
   getActiveHousehold,
-  createHousehold,
   switchHousehold,
-  addHomeMember,
+  useSwitchingHome,
   type DB,
 } from "@/lib/store";
 import { useTheme, THEME_PRESETS } from "@/lib/theme";
@@ -71,6 +68,11 @@ import { useUpdateStatus } from "@/lib/updates";
 import { BackupsPanel } from "@/components/settings/BackupsPanel";
 import { ReconciliationPanel } from "@/components/settings/ReconciliationPanel";
 import { UpdatePanel } from "@/components/settings/UpdatePanel";
+import { ThemeColourGrid, ThemeModePicker } from "@/components/settings/ThemeControls";
+import { CurrencyPicker } from "@/components/CurrencyPicker";
+import { AddMemberForm } from "@/components/AddMemberForm";
+import { uiActions } from "@/lib/ui-store";
+import { currentCurrency } from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import {
@@ -85,6 +87,7 @@ import {
 
 const SECTIONS = [
   "appearance",
+  "currency",
   "security",
   "homes",
   "payees",
@@ -145,13 +148,12 @@ export function SettingsPage() {
 
   const [adding, setAdding] = useState<null | "password" | "home" | "member" | "payee">(null);
   const [payee, setPayee] = useState({ name: "", vpa: "" });
-  const [newHomeName, setNewHomeName] = useState("");
-  const [memberName, setMemberName] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
 
   const activeUser = useActiveUser();
   const activeHome = getActiveHousehold(db);
   const households = getHouseholds(db);
+  const switchingTo = useSwitchingHome();
   const presetLabel = THEME_PRESETS.find((p) => p.id === preset)?.label ?? "Custom colour";
 
   if (!hydrated) return <div className="shimmer mx-auto h-96 max-w-2xl rounded-[28px]" />;
@@ -269,6 +271,15 @@ export function SettingsPage() {
       action: () => open("homes"),
     },
     {
+      id: "currency",
+      group: 1,
+      icon: Banknote,
+      title: "Currency",
+      summary: `${currentCurrency().name} (${currentCurrency().symbol}) · ${activeHome.name}`,
+      keywords: "currency money rupee dollar euro symbol custom country",
+      action: () => open("currency"),
+    },
+    {
       id: "payees",
       group: 1,
       icon: CreditCard,
@@ -336,6 +347,7 @@ export function SettingsPage() {
     appearance: "Appearance",
     security: "Security",
     homes: "Households",
+    currency: "Currency",
     payees: "Payees",
     reconciliation: "Reconciliation",
     backups: "Backups",
@@ -463,87 +475,12 @@ export function SettingsPage() {
             <>
               <Category>Mode</Category>
               <Group>
-                <div className="bg-card px-5 py-5">
-                  <div
-                    role="radiogroup"
-                    aria-label="Colour mode"
-                    className="grid grid-cols-3 overflow-hidden rounded-full border border-muted-foreground/40"
-                  >
-                    {(
-                      [
-                        { k: "light", label: "Light", icon: Sun },
-                        { k: "dark", label: "Dark", icon: Moon },
-                        { k: "system", label: "System", icon: Monitor },
-                      ] as const
-                    ).map((o, i) => {
-                      const on = mode === o.k;
-                      return (
-                        <button
-                          key={o.k}
-                          type="button"
-                          role="radio"
-                          aria-checked={on}
-                          onClick={() => setMode(o.k)}
-                          className={cn(
-                            "flex h-11 items-center justify-center gap-2 text-sm font-semibold transition-colors",
-                            i > 0 && "border-l border-muted-foreground/40",
-                            on
-                              ? "bg-primary/20 text-foreground"
-                              : "text-muted-foreground hover:bg-muted",
-                          )}
-                        >
-                          {on ? (
-                            <Check className="h-4 w-4" strokeWidth={2.5} />
-                          ) : (
-                            <o.icon className="h-4 w-4" />
-                          )}
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <ThemeModePicker mode={mode} setMode={setMode} />
               </Group>
 
               <Category>Theme colour</Category>
               <Group>
-                <div className="bg-card px-5 py-6">
-                  <div className="grid grid-cols-5 gap-y-5 sm:gap-y-6">
-                    {THEME_PRESETS.map((p) => {
-                      const on = preset === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          aria-pressed={on}
-                          aria-label={p.label}
-                          title={p.label}
-                          onClick={() => setPreset(p.id)}
-                          className="group flex flex-col items-center gap-2 focus-visible:outline-none"
-                        >
-                          <span
-                            className={cn(
-                              "relative flex h-14 w-14 items-center justify-center rounded-full transition-transform group-hover:scale-105 group-focus-visible:ring-2 group-focus-visible:ring-ring",
-                              on && "ring-2 ring-foreground ring-offset-4 ring-offset-card",
-                            )}
-                            style={{
-                              background: `conic-gradient(${p.primaryColor} 0 50%, ${p.accentColor} 50% 100%)`,
-                            }}
-                          >
-                            {on && (
-                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-card text-foreground shadow">
-                                <Check className="h-4 w-4" strokeWidth={3} />
-                              </span>
-                            )}
-                          </span>
-                          <span className="line-clamp-2 max-w-[72px] text-center text-[11px] leading-tight text-muted-foreground">
-                            {p.label.replace("SmartBudget ", "")}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <ThemeColourGrid preset={preset} setPreset={setPreset} />
                 <Row
                   leading={
                     <label
@@ -678,43 +615,40 @@ export function SettingsPage() {
               <Group>
                 {households.map((h) => {
                   const on = h.id === activeHome.id;
+                  const loading = switchingTo === h.id;
                   return (
                     <Row
                       key={h.id}
                       icon={Home}
                       title={h.name}
-                      summary={on ? "Current household" : `Code ${h.code}`}
+                      summary={loading ? "Switching…" : on ? "Current household" : `Code ${h.code}`}
                       onClick={() => {
-                        if (on) return;
-                        switchHousehold(h.id);
-                        toast.success(`Switched to ${h.name}`);
+                        if (on || switchingTo) return;
+                        switchHousehold(h.id)
+                          .then(() => toast.success(`Switched to ${h.name}`))
+                          .catch(() =>
+                            toast.error(`Couldn't switch to ${h.name}. Check your connection.`),
+                          );
                       }}
-                      trailing={<Radio checked={on} />}
+                      trailing={
+                        loading ? (
+                          <Loader2
+                            className="h-5 w-5 shrink-0 animate-spin text-primary"
+                            aria-label="Loading"
+                          />
+                        ) : (
+                          <Radio checked={on} />
+                        )
+                      }
                     />
                   );
                 })}
-                {adding === "home" ? (
-                  <InlineForm
-                    submitLabel="Create"
-                    onCancel={() => setAdding(null)}
-                    onSubmit={() => {
-                      if (!newHomeName.trim()) return toast.error("Enter a household name");
-                      createHousehold(newHomeName.trim());
-                      setNewHomeName("");
-                      setAdding(null);
-                      toast.success("Household created");
-                    }}
-                  >
-                    <TextField
-                      label="Household name"
-                      autoFocus
-                      value={newHomeName}
-                      onChange={(e) => setNewHomeName(e.target.value)}
-                    />
-                  </InlineForm>
-                ) : (
-                  <Row icon={Plus} title="Add household" onClick={() => setAdding("home")} />
-                )}
+                <Row
+                  icon={Plus}
+                  title="Add household"
+                  summary="Set up a new home with its own budget"
+                  onClick={() => uiActions.openNewHomeWizard()}
+                />
               </Group>
 
               <Category>Members</Category>
@@ -728,32 +662,25 @@ export function SettingsPage() {
                       </span>
                     }
                     title={m.name}
-                    summary={m.role === "owner" ? "Owner" : "Member"}
+                    summary={[
+                      m.role === "owner" ? "Owner" : "Member",
+                      m.username ? `@${m.username}` : "No login yet",
+                    ].join(" · ")}
                   />
                 ))}
                 {adding === "member" ? (
-                  <InlineForm
-                    submitLabel="Add"
-                    onCancel={() => setAdding(null)}
-                    onSubmit={() => {
-                      if (!memberName.trim()) return toast.error("Enter a name");
-                      addHomeMember(memberName.trim());
-                      setMemberName("");
-                      setAdding(null);
-                      toast.success("Member added");
-                    }}
-                  >
-                    <TextField
-                      label="Name"
-                      autoFocus
-                      value={memberName}
-                      onChange={(e) => setMemberName(e.target.value)}
-                    />
-                  </InlineForm>
+                  <AddMemberForm onDone={() => setAdding(null)} onCancel={() => setAdding(null)} />
                 ) : (
                   <Row icon={UserPlus} title="Add member" onClick={() => setAdding("member")} />
                 )}
               </Group>
+            </>
+          )}
+
+          {page === "currency" && (
+            <>
+              <Category>Currency for {activeHome.name}</Category>
+              <CurrencyPicker />
             </>
           )}
 

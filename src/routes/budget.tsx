@@ -42,20 +42,28 @@ import {
 } from "@/lib/store";
 import { CategoryGlyph, categoryIconKey } from "@/lib/category-icons";
 import { IconPicker } from "@/components/IconPicker";
-import { money, monthKey, monthLabel, shiftMonth, categoryTransferDate } from "@/lib/format";
+import {
+  currencySymbol,
+  amountNumber,
+  money,
+  monthKey,
+  monthLabel,
+  shiftMonth,
+  categoryTransferDate,
+} from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/budget")({
   head: () => ({
     meta: [
-      { title: "Budget — Assign every rupee | SmartBudget" },
+      { title: "Budget — Give your money a job | SmartBudget" },
       {
         name: "description",
         content:
           "Zero-based monthly budget: assign every rupee to a category, track activity and see what's still available.",
       },
-      { property: "og:title", content: "Budget — Assign every rupee | SmartBudget" },
+      { property: "og:title", content: "Budget — Give your money a job | SmartBudget" },
       {
         property: "og:description",
         content: "Assign every rupee to a category and track what's left this month.",
@@ -114,7 +122,10 @@ function BudgetPage() {
       </header>
 
       {/* Single-focus hero */}
-      <section className="animate-bounce-in flex flex-col items-center py-1 text-center">
+      <section
+        data-tour="ready"
+        className="animate-bounce-in flex flex-col items-center py-1 text-center"
+      >
         <p className="text-sm text-muted-foreground">Ready to Assign</p>
         <p
           className={cn(
@@ -122,17 +133,14 @@ function BudgetPage() {
             healthy ? "text-foreground" : "text-destructive",
           )}
         >
-          <span className={healthy ? "text-primary" : "text-destructive"}>₹</span>{" "}
-          {Math.abs(toAssign).toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          <span className={healthy ? "text-primary" : "text-destructive"}>{currencySymbol()}</span>{" "}
+          {amountNumber(Math.abs(toAssign))}
         </p>
         <p className="mt-3 max-w-xs text-xs text-muted-foreground">
           {editing
             ? "Editing — tap amounts to reassign, or add, rename, reorder and remove categories."
             : healthy
-              ? "Give every rupee a job to keep the plan honest."
+              ? "Give all your money a job to keep the plan honest."
               : "You've over-assigned. Move money back from a category."}
         </p>
       </section>

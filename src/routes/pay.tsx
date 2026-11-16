@@ -35,7 +35,7 @@ import {
   type SplitShare,
   type Transaction,
 } from "@/lib/store";
-import { money, prettyDate, todayISO } from "@/lib/format";
+import { currencySymbol, money, prettyDate, todayISO } from "@/lib/format";
 import { CategoryInline, CategoryList } from "@/lib/category-icons";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { uiActions } from "@/lib/ui-store";
@@ -917,7 +917,9 @@ function SplitForm({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Total (₹)</Label>
+          <Label className="text-xs font-medium text-muted-foreground">
+            Total ({currencySymbol()})
+          </Label>
           <Input
             className="num"
             inputMode="decimal"

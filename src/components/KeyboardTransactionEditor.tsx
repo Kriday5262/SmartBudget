@@ -141,7 +141,7 @@ export function KeyboardTransactionEditor({
           account.type === "credit" && account.brand ? (
             <CardBrandMark brand={account.brand} className="h-5 w-8" />
           ) : (
-            <BankMark bank={account.bank} className="h-6 w-6" />
+            <BankMark bank={account.bank} logo={account.bankLogo} className="h-6 w-6" />
           ),
       })),
   );

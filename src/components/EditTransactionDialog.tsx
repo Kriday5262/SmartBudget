@@ -25,7 +25,7 @@ import {
   deleteTransaction,
   categoryTransferInfo,
 } from "@/lib/store";
-import { money, prettyDate } from "@/lib/format";
+import { currencySymbol, money, prettyDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** Edit an existing transaction from anywhere (History, account detail). */
@@ -119,7 +119,7 @@ function CatTransferForm({ id }: { id: string }) {
           excludeId={fromId}
         />
       </Field>
-      <Field label="Amount (₹)">
+      <Field label={`Amount (${currencySymbol()})`}>
         <Input
           className="num"
           inputMode="decimal"
@@ -331,7 +331,7 @@ function Form({ id }: { id: string }) {
         <>
           <AccountPicker label="From account" value={fromId} onChange={setFromId} />
           <AccountPicker label="To account" value={toId} onChange={setToId} excludeId={fromId} />
-          <Field label="Amount (₹)">
+          <Field label={`Amount (${currencySymbol()})`}>
             <Input
               className="num"
               inputMode="decimal"
@@ -352,7 +352,7 @@ function Form({ id }: { id: string }) {
       ) : (
         <>
           <AccountPicker label="Account" value={accountId} onChange={setAccountId} />
-          <Field label="Amount (₹)">
+          <Field label={`Amount (${currencySymbol()})`}>
             <Input
               className="num"
               inputMode="decimal"

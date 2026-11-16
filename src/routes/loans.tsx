@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDB, addLoan, updateLoan, deleteLoan, type Loan } from "@/lib/store";
-import { money } from "@/lib/format";
+import { currencySymbol, money } from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
@@ -191,7 +191,9 @@ function LoanForm({ loan, onClose }: { loan?: Loan; onClose: () => void }) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Borrowed (₹)</Label>
+          <Label className="text-xs font-medium text-muted-foreground">
+            Borrowed ({currencySymbol()})
+          </Label>
           <Input
             className="num"
             inputMode="decimal"
@@ -201,7 +203,9 @@ function LoanForm({ loan, onClose }: { loan?: Loan; onClose: () => void }) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Outstanding (₹)</Label>
+          <Label className="text-xs font-medium text-muted-foreground">
+            Outstanding ({currencySymbol()})
+          </Label>
           <Input
             className="num"
             inputMode="decimal"

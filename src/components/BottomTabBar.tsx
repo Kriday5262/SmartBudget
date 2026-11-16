@@ -70,6 +70,7 @@ function Tab({
     <Link
       to={to}
       preload="intent"
+      data-tour={`nav${to}`}
       className="tap flex flex-1 flex-col items-center justify-center gap-1 py-2 px-1 min-h-[48px]"
       aria-current={active ? "page" : undefined}
     >
@@ -165,6 +166,7 @@ export function BottomTabBar() {
               if (swipe.current.fired) e.preventDefault();
             }}
             aria-label="Add transaction — swipe up for more options"
+            data-tour="add"
             className="tap -mt-8 flex h-14 w-14 items-center justify-center rounded-2xl border-4 border-background gradient-primary text-primary-foreground shadow-[var(--shadow-3d)]"
             style={{
               transform: `translateY(${-drag * 0.45}px) scale(${1 + progress * 0.08})`,
@@ -194,6 +196,7 @@ export function BottomTabBar() {
             onClick={uiActions.closeFab}
           />
           <div
+            data-tour="more-sheet"
             className="animate-rise pb-safe fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-[32px] border-t border-border bg-card p-5 shadow-[var(--shadow-lift)]"
             onTouchStart={(e) => {
               const startY = e.touches[0].clientY;
@@ -242,6 +245,7 @@ export function BottomTabBar() {
                   <Link
                     key={item.to}
                     to={item.to}
+                    data-tour={`nav${item.to}`}
                     onClick={uiActions.closeFab}
                     className={cn(
                       "tap flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-semibold",

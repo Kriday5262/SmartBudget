@@ -46,6 +46,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
         setPullY(PULL_THRESHOLD);
         try {
           await refreshDB();
+          window.dispatchEvent(new Event("smartbudget:pulled"));
           toast.success("Updated with latest data", { duration: 1500 });
         } catch {}
         setTimeout(() => {
@@ -88,17 +89,18 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
             "flex h-10 w-10 items-center justify-center rounded-full border shadow-lg transition-colors duration-200",
             readyToRefresh || refreshing
               ? "gradient-primary text-primary-foreground border-primary"
-              : "bg-card border-border text-primary"
+              : "bg-card border-border text-primary",
           )}
         >
           <RefreshCw
             className={cn(
               "h-5 w-5 transition-transform duration-200",
               refreshing && "animate-spin",
-              !refreshing && readyToRefresh && "rotate-180"
+              !refreshing && readyToRefresh && "rotate-180",
             )}
             style={{
-              transform: !refreshing && !readyToRefresh ? `rotate(${progress * 180}deg)` : undefined,
+              transform:
+                !refreshing && !readyToRefresh ? `rotate(${progress * 180}deg)` : undefined,
             }}
           />
         </div>

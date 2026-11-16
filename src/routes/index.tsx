@@ -11,7 +11,7 @@ import {
   transactionLabel,
   sortedAccounts,
 } from "@/lib/store";
-import { money, monthKey, greeting, prettyDate } from "@/lib/format";
+import { currencySymbol, amountNumber, money, monthKey, greeting, prettyDate } from "@/lib/format";
 import { useActiveUser } from "@/lib/lock";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CategoryInline, CategoryList } from "@/lib/category-icons";
@@ -99,11 +99,8 @@ function Dashboard() {
       <section className="animate-bounce-in flex flex-col items-center py-2 text-center">
         <p className="text-sm text-muted-foreground">Ready to Assign</p>
         <p className="num mt-1 text-[clamp(2.5rem,13vw,3.5rem)] font-bold leading-none">
-          <span className="text-primary">₹</span>{" "}
-          {Math.abs(toAssign).toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          <span className="text-primary">{currencySymbol()}</span>{" "}
+          {amountNumber(Math.abs(toAssign))}
         </p>
         <Link
           to="/budget"

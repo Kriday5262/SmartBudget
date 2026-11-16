@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDB, contributeToGoal, deleteGoal, updateGoal, type Goal } from "@/lib/store";
-import { money, prettyDate } from "@/lib/format";
+import { currencySymbol, money, prettyDate } from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { uiActions } from "@/lib/ui-store";
 import { cn } from "@/lib/utils";
@@ -146,7 +146,9 @@ function GoalForm({ goal, onClose }: { goal: Goal; onClose: () => void }) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Target (₹)</Label>
+          <Label className="text-xs font-medium text-muted-foreground">
+            Target ({currencySymbol()})
+          </Label>
           <Input
             className="num"
             inputMode="decimal"
@@ -155,7 +157,9 @@ function GoalForm({ goal, onClose }: { goal: Goal; onClose: () => void }) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Saved (₹)</Label>
+          <Label className="text-xs font-medium text-muted-foreground">
+            Saved ({currencySymbol()})
+          </Label>
           <Input
             className="num"
             inputMode="decimal"
@@ -176,7 +180,9 @@ function GoalForm({ goal, onClose }: { goal: Goal; onClose: () => void }) {
       </div>
 
       <div className="space-y-1.5 rounded-2xl bg-muted p-3">
-        <Label className="text-xs font-medium text-muted-foreground">Quick top-up (₹)</Label>
+        <Label className="text-xs font-medium text-muted-foreground">
+          Quick top-up ({currencySymbol()})
+        </Label>
         <div className="flex gap-2">
           <Input
             className="num bg-card"

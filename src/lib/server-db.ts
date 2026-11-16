@@ -156,7 +156,13 @@ export function loadDBForClient(homeId = "default"): string | null {
     const households = homeIds
       .map((id) => {
         const stored = storedById.get(id);
-        if (stored) return stored;
+        if (stored) {
+          // The registry holds each home's real name and invite code (the code
+          // joining accepts); older builds saved a different code inside each
+          // home, and a rename only reaches the registry, so prefer its values.
+          const reg = registry.find((r) => r.id === id);
+          return reg ? { ...stored, name: reg.name || stored.name, code: reg.code } : stored;
+        }
         const h = registry.find((r) => r.id === id);
         if (!h) return null;
         return {
@@ -223,11 +229,12 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function freshHomeJSON(homeId: string, name: string, ownerName: string): string {
+function freshHomeJSON(homeId: string, name: string, ownerName: string, code: string): string {
   const home: any = {
     id: homeId,
     name,
-    code: homeCode(),
+    // Must be the code in the homes registry — that's what joining checks.
+    code,
     createdAt: today(),
     members: [
       {
@@ -309,7 +316,7 @@ export function provisionHomeServer(
     return { ok: false, id: "", name: "", code: "", error: "Invalid home id." };
   }
   const code = homeCode();
-  saveDBValue(freshHomeJSON(cleanId, name, ownerName), cleanId);
+  saveDBValue(freshHomeJSON(cleanId, name, ownerName, code), cleanId);
   const entries = loadHomesRegistry();
   if (!entries.some((h) => h.id === cleanId)) {
     entries.push({ id: cleanId, name, code, owner: ownerUsername });
@@ -333,6 +340,21 @@ export function createHomeServer(
   me.homeId = me.homeId || prov.id;
   saveUsersServer(users, "default");
   return { ok: true, home: { id: prov.id, name: prov.name, code: prov.code, owner: me.username } };
+}
+
+/** Rename a household (any member may). Returns the cleaned name. */
+export function renameHomeServer(
+  homeId: string,
+  name: string,
+): { ok: boolean; name?: string; error?: string } {
+  const clean = (name || "").trim().slice(0, 60);
+  if (!clean) return { ok: false, error: "Enter a household name." };
+  const entries = loadHomesRegistry();
+  const entry = entries.find((h) => h.id === homeId);
+  if (!entry) return { ok: false, error: "Household not found." };
+  entry.name = clean;
+  saveHomesRegistry(entries);
+  return { ok: true, name: clean };
 }
 
 export function joinHomeServer(
@@ -467,6 +489,45 @@ export function registerUserServer(
   saveUsersServer(users, homeId);
   const { passwordHash: _omit, ...safeUser } = newUser;
   return { ok: true, user: safeUser };
+}
+
+/**
+ * A household member creates a login for someone else. The new account belongs
+ * only to that household, which opens by default when they sign in.
+ */
+export function createMemberAccountServer(
+  input: { name: string; username: string; password: string },
+  homeId: string,
+): { ok: boolean; error?: string; user?: { name: string; username: string } } {
+  const cleanUsername = (input.username || "").trim().toLowerCase();
+  const cleanName = (input.name || "").trim();
+  const password = input.password ?? "";
+  if (!cleanName || !cleanUsername) return { ok: false, error: "Enter a name and a username." };
+  if (!/^[a-z0-9._-]{3,32}$/.test(cleanUsername)) {
+    return {
+      ok: false,
+      error: "Usernames are 3–32 characters: letters, numbers, dot, dash or underscore.",
+    };
+  }
+  if (password.length < 8) return { ok: false, error: "Password must be at least 8 characters." };
+  if (!loadHomesRegistry().some((h) => h.id === homeId)) {
+    return { ok: false, error: "Household not found." };
+  }
+  const users = loadUsersServer("default");
+  if (users.some((u) => u.username.toLowerCase() === cleanUsername)) {
+    return { ok: false, error: "That username is already taken." };
+  }
+  users.push({
+    id: "usr-" + Math.random().toString(36).slice(2, 9),
+    name: cleanName,
+    username: cleanUsername,
+    passwordHash: hashUserPassword(password),
+    createdAt: today(),
+    homeId,
+    homes: [homeId],
+  });
+  saveUsersServer(users, "default");
+  return { ok: true, user: { name: cleanName, username: cleanUsername } };
 }
 
 export function verifyUserServer(

@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { useDB, ACCOUNT_TYPES, accountBalance, type DB } from "@/lib/store";
+import { useDB, ACCOUNT_TYPES, BANKS, accountBalance, type DB } from "@/lib/store";
 import { money } from "@/lib/format";
 import { CategoryGlyph, categoryIconKey } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,11 @@ export function AccountPicker({
             (selected.type === "credit" && selected.brand ? (
               <CardBrandMark brand={selected.brand} className="h-5 w-8 shrink-0" />
             ) : (
-              <BankMark bank={selected.bank} className="h-5 w-5 shrink-0" />
+              <BankMark
+                bank={selected.bank}
+                logo={selected.bankLogo}
+                className="h-5 w-5 shrink-0"
+              />
             ))}
           <span
             className={cn(
@@ -190,7 +194,7 @@ export function AccountPicker({
                         {a.type === "credit" && a.brand ? (
                           <CardBrandMark brand={a.brand} className="h-5 w-8 shrink-0" />
                         ) : (
-                          <BankMark bank={a.bank} className="h-5 w-5 shrink-0" />
+                          <BankMark bank={a.bank} logo={a.bankLogo} className="h-5 w-5 shrink-0" />
                         )}
                         <span className="flex-1 truncate">{a.name}</span>
                         <span
@@ -1002,6 +1006,254 @@ export function DatePicker({
             <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
               ←↑↓→ move · PgUp/PgDn month · Enter pick · Esc close
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/* ---------------- bank ---------------- */
+
+type BankChoice = { bank: string; logo?: string };
+
+/**
+ * Pick the bank or provider for an account: type any name. Built-in banks
+ * match as you type, and banks worldwide are searched (on the server) with
+ * their logos. Whatever is typed can be used as-is.
+ */
+export function BankPicker({
+  value,
+  logo,
+  onChange,
+  title = "Bank",
+}: {
+  value?: string;
+  logo?: string;
+  onChange: (c: BankChoice) => void;
+  title?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<
+    { id: string; name: string; description?: string; logo?: string }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
+  const mobileViewportStyle = useMobileViewportStyle(open);
+  const q = query.trim();
+
+  // Search the world's banks a moment after typing stops.
+  useEffect(() => {
+    if (!open || q.length < 2) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    let stale = false;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const { searchBanksApi, bankLogoApi } = await import("@/lib/api");
+        const found = await searchBanksApi({ data: { query: q } });
+        if (stale) return;
+        setResults(found);
+        setSearching(false);
+        // Each logo pops in as soon as it arrives.
+        for (const r of found) {
+          if (r.logo) continue;
+          bankLogoApi({ data: { id: r.id } })
+            .then((logo) => {
+              if (!stale && logo) {
+                setResults((rs) => rs.map((x) => (x.id === r.id ? { ...x, logo } : x)));
+              }
+            })
+            .catch(() => {});
+        }
+      } catch {
+        if (!stale) setResults([]);
+      } finally {
+        if (!stale) setSearching(false);
+      }
+    }, 400);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
+  }, [q, open]);
+
+  const builtIn = BANKS.filter(
+    (b) => b !== "Other" && (!q || b.toLowerCase().includes(q.toLowerCase())),
+  ).slice(0, q ? 4 : 12);
+  const exact =
+    !!q &&
+    (builtIn.some((b) => b.toLowerCase() === q.toLowerCase()) ||
+      results.some((r) => r.name.toLowerCase() === q.toLowerCase()));
+
+  function choose(c: BankChoice) {
+    onChange(c);
+    setOpen(false);
+    setQuery("");
+  }
+
+  const rowClass = (on: boolean) =>
+    cn(
+      "tap flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm no-select",
+      on ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+    );
+  const heading = "mb-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground";
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="tap flex h-10 w-full items-center gap-2 rounded-xl border bg-card px-3 text-left text-sm no-select"
+      >
+        {value && value !== "Other" && (
+          <BankMark bank={value} logo={logo} className="h-5 w-5 shrink-0" />
+        )}
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate",
+            value && value !== "Other" ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {value && value !== "Other" ? value : "Type your bank's name"}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
+
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) setQuery("");
+        }}
+      >
+        <DialogContent
+          style={mobileViewportStyle}
+          className={cn(
+            "max-h-[70vh] overflow-y-auto rounded-3xl no-select sm:max-w-lg",
+            "max-sm:top-0 max-sm:bottom-auto max-sm:grid-rows-[auto_minmax(0,1fr)] max-sm:h-[100dvh] max-sm:max-h-none max-sm:w-full max-sm:max-w-full max-sm:translate-y-0",
+            "max-sm:rounded-b-none max-sm:rounded-t-[32px] max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]",
+          )}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-base">{title}</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const first = results.find((r) => r.name.toLowerCase() === q.toLowerCase());
+                if (first) choose({ bank: first.name, logo: first.logo });
+                else if (q) choose({ bank: q });
+              }}
+            >
+              <SearchInput
+                placeholder="Search any bank, e.g. HSBC, Chase, Revolut"
+                value={query}
+                onChange={setQuery}
+              />
+            </form>
+
+            {q && !exact && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => choose({ bank: q })}
+                  className={rowClass(false)}
+                >
+                  <BankMark bank={q} className="h-6 w-6 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">
+                    Use “<span className="font-semibold">{q}</span>”
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {q.length >= 2 && (
+              <div>
+                <p className={cn(heading, "flex items-center gap-2")}>
+                  Banks worldwide
+                  {searching && (
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  )}
+                </p>
+                <div className="space-y-1">
+                  {results.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => choose({ bank: r.name, logo: r.logo })}
+                      className={cn(rowClass(r.name === value), "sb-wiz-item")}
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
+                        <BankMark bank={r.name} logo={r.logo} className="h-7 w-7" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{r.name}</span>
+                        {r.description && (
+                          <span
+                            className={cn(
+                              "block truncate text-[11px]",
+                              r.name === value
+                                ? "text-primary-foreground/70"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {r.description}
+                          </span>
+                        )}
+                      </span>
+                      {r.name === value && <Check className="h-4 w-4 shrink-0" />}
+                    </button>
+                  ))}
+                  {!searching && results.length === 0 && (
+                    <p className="px-3 py-2 text-xs text-muted-foreground">
+                      No banks found online. You can still use “{q}”.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {builtIn.length > 0 && (
+              <div>
+                <p className={heading}>{q ? "Saved banks" : "Popular in India"}</p>
+                <div className="space-y-1">
+                  {builtIn.map((b) => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => choose({ bank: b })}
+                      className={rowClass(b === value && !logo)}
+                    >
+                      <BankMark bank={b} className="h-6 w-6 shrink-0" />
+                      <span className="flex-1 truncate">{b}</span>
+                      {b === value && !logo && <Check className="h-4 w-4 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!q && (
+              <p className="px-1 text-xs text-muted-foreground">
+                Start typing to search banks in any country. Logos are found by your SmartBudget
+                server and saved with the account.
+              </p>
+            )}
+
+            {value && value !== "Other" && (
+              <button
+                type="button"
+                onClick={() => choose({ bank: "Other" })}
+                className="px-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+              >
+                Remove bank
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

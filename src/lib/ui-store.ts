@@ -11,6 +11,8 @@ type UIState = {
   fabOpen: boolean;
   editAccountId?: string;
   editTxnId?: string;
+  /** "new-home": the setup wizard was opened to create another household */
+  setupMode?: "new-home";
 };
 
 let state: UIState = { addOpen: false, addTab: "transaction", fabOpen: false };
@@ -38,6 +40,8 @@ export const uiActions = {
   closeFab: () => set({ fabOpen: false }),
   editAccount: (editAccountId?: string) => set({ editAccountId, fabOpen: false }),
   editTxn: (editTxnId?: string) => set({ editTxnId, fabOpen: false }),
+  openNewHomeWizard: () => set({ setupMode: "new-home", fabOpen: false }),
+  closeSetup: () => set({ setupMode: undefined }),
 };
 
 export function useUI(): UIState {
